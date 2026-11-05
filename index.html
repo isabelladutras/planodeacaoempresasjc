@@ -266,14 +266,64 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;",
 function cat(t){t=t||"";if(/Farm/i.test(t))return"Farmácia";if(/Atacarejo/i.test(t))return"Atacarejo";if(/Shopping/i.test(t))return"Shopping";if(/Supermercado|Hipermercado|Mercado/i.test(t))return"Mercado";if(/RH|CD|Parque|Indústria|Hospital|Logística|Transport|Armazém|Distribuidora/i.test(t))return"Empresa / RH";return"Loja"}
 function digits(t){return(t||"").replace(/\D/g,"")}
 function isCell(t){const d=digits(t);return d.length===11&&d[2]==="9"}
-function waLink(r){const d=digits(r.telefone);return"https://wa.me/55"+d+"?text="+encodeURIComponent(msgFor(r))}
+function waLinkText(r,t){return"https://wa.me/55"+digits(r.telefone)+"?text="+encodeURIComponent(t)}
 function mapLink(r){return"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([r.nome,r.endereco,r.bairro,r.cidade].filter(Boolean).join(", "))}
 function isRH(r){return cat(r.tipo)==="Empresa / RH"}
-function msgFor(r){
-  const nome=me||"[seu nome]";
-  if(r&&isRH(r)) return "Olá! Aqui é a "+nome+", do polo UniFECAF de São José dos Campos (Rua Bacabal, 2250 – Parque Industrial). De 7 a 12/12 estamos fazendo uma semana de orientação sobre faculdade na cidade e gostaríamos de levar uma ação para os colaboradores"+(r?" da "+r.nome:"")+", no refeitório ou na troca de turno, por algumas horas. Com quem posso falar sobre isso?";
-  return "Olá! Aqui é a "+nome+", do polo UniFECAF de São José dos Campos (Rua Bacabal, 2250 – Parque Industrial). De 7 a 12/12 estamos fazendo uma semana de orientação sobre faculdade na cidade e gostaríamos de montar uma mesinha por algumas horas"+(r?" na "+r.nome:"")+", sem atrapalhar o movimento. Com quem posso falar sobre isso?";
+function kindOf(r){
+  if(!r)return"loja";
+  const t=r.tipo||"", n=r.nome||"";
+  if(/Simpatia/i.test(n)&&!/Emp[oó]rio/i.test(n))return/CD|escrit/i.test(t)?"simpatiaCD":"simpatia";
+  if(/Hospital/i.test(t))return"hospital";
+  if(/Parque empresarial/i.test(t))return"parque";
+  if(/Shopping/i.test(t))return"shopping";
+  if(/Farm/i.test(t))return"farmacia";
+  if(cat(t)==="Empresa / RH")return"rh";
+  return"loja";
 }
+function nearPolo(r){return!!r&&(/Parque Industrial/i.test(r.bairro||"")||/Bacabal/i.test(r.endereco||""))}
+const ASK={loja:"o gerente da loja",farmacia:"o gerente da farmácia",shopping:"o marketing do shopping",rh:"alguém do RH",hospital:"alguém do RH",parque:"a administração do parque",simpatia:"o gerente da loja",simpatiaCD:"alguém do RH ou do marketing da rede"};
+function askFor(r){return ASK[kindOf(r)]}
+function defaultMoment(r){if(!r)return"primeiro";if(r.status==="Agendado")return"confirmar";if(r.status==="Sem resposta"||r.status==="Aguardando retorno")return"retomar";return"primeiro"}
+function msgFor(r,mom){
+  mom=mom||defaultMoment(r);
+  const nome=me||"[seu nome]", k=kindOf(r), emp=r&&r.nome?r.nome:"";
+  const eu="Aqui é a "+nome+", do polo UniFECAF de São José dos Campos (Rua Bacabal, 2250 – Parque Industrial).";
+  const marca=emp.split(" – ")[0].replace(/\s*\(.*\)$/,"");
+  const oi=marca?"Olá, equipe "+marca+"! Tudo bem? ":"Olá! Tudo bem? ";
+  const perto=nearPolo(r)?" Estamos aqui pertinho de vocês, no mesmo bairro.":"";
+  if(mom==="confirmar"){
+    const ag=(r&&r.agenda)||{};
+    const DIA={"2026-12-07":"segunda, 07/12","2026-12-08":"terça, 08/12","2026-12-09":"quarta, 09/12","2026-12-10":"quinta, 10/12","2026-12-11":"sexta, 11/12","2026-12-12":"sábado, 12/12"};
+    const quando=[DIA[ag.dia]||"",ag.turno?ag.turno.toLowerCase():"",ag.horario?"das "+ag.horario:""].filter(Boolean).join(", ");
+    return oi+eu+" Passando para confirmar a nossa ação de orientação sobre faculdade aí com vocês: "+(quando||"[dia e horário]")+". Vamos em duas pessoas, com uma mesa pequena e um banner, sem atrapalhar o movimento. Se mudar alguma coisa, é só me avisar por aqui. Obrigada!";
+  }
+  if(mom==="retomar"){
+    if(k==="rh"||k==="hospital"||k==="parque"||k==="simpatiaCD")
+      return oi+eu+" Estou retomando o contato sobre a ação de orientação sobre faculdade que queremos levar para os colaboradores de vocês entre 7 e 12/12. Conseguiram ver internamente? Se ficar mais fácil, posso mandar os detalhes por e-mail ou passar aí pessoalmente.";
+    return oi+eu+" Estou retomando o contato sobre a mesinha de orientação sobre faculdade que queremos montar aí na loja entre 7 e 12/12, por algumas horas. Conseguiram ver com a gerência? Se ficar mais fácil, posso passar aí pessoalmente para conversar.";
+  }
+  switch(k){
+    case"simpatia":
+      if(r&&/Parque Industrial/i.test(r.nome||""))
+        return oi+eu+" Conversamos com a equipe de vocês sobre fazer a nossa ação de orientação sobre faculdade numa segunda-feira. Queria confirmar se pode ser na segunda, 07/12, aí na loja de vocês, e qual horário fica melhor. Levamos uma mesa pequena e um banner, num canto que não atrapalhe o movimento.";
+      return oi+eu+" Já estamos conversando com o Simpatia sobre uma ação de orientação sobre faculdade na loja do Parque Industrial e gostaríamos de levar a mesma ação também para a unidade de vocês, em algum dia entre 7 e 12/12. É uma mesa pequena por algumas horas, sem atrapalhar o movimento. Com quem posso alinhar?";
+    case"simpatiaCD":
+      return oi+eu+" Estamos organizando com o Simpatia uma ação de orientação sobre faculdade nas lojas entre 7 e 12/12 e gostaríamos de levar a mesma ação para os colaboradores do centro de distribuição, no refeitório ou na troca de turno, por cerca de uma hora. Com quem posso conversar sobre isso?";
+    case"farmacia":
+      return oi+eu+perto+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade em vários pontos da cidade. A ideia é ficar com uma mesinha na entrada da farmácia por algumas horas, sem atrapalhar o atendimento, tirando dúvidas de quem quer começar uma graduação. Teria um dia nessa semana que funcione para vocês? Com quem posso falar?";
+    case"shopping":
+      return oi+eu+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade em São José e gostaríamos de saber como funciona para ter um espaço de ativação no shopping por um dia (mesa ou quiosque pequeno). Com quem do marketing posso falar sobre valores e disponibilidade?";
+    case"hospital":
+      return oi+eu+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade e gostaríamos de levar uma ação para os colaboradores do hospital, perto do refeitório ou na troca de plantão, por cerca de uma hora. Muita gente da área da saúde quer começar ou continuar a graduação, e a gente tira as dúvidas ali mesmo. Com quem do RH posso conversar?";
+    case"parque":
+      return oi+eu+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade e gostaríamos de montar uma mesa por algumas horas perto da praça de alimentação do parque, para quem trabalha nas empresas daí. Com quem posso falar sobre o uso do espaço?";
+    case"rh":
+      return oi+eu+perto+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade e gostaríamos de levar uma ação para os colaboradores"+(emp?" da "+marca:"")+", no refeitório ou na troca de turno, por cerca de uma hora. Muita gente quer começar ou retomar a graduação e não sabe por onde começar; a gente tira as dúvidas ali mesmo. Com quem do RH posso conversar?";
+    default:
+      return oi+eu+perto+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade em vários pontos da cidade, e a loja de vocês tem muito movimento. A ideia é montar uma mesinha por algumas horas, num canto que não atrapalhe, tirando dúvidas de quem quer começar uma graduação. Teria um dia nessa semana que funcione para vocês? Com quem posso falar?";
+  }
+}
+function callLine(r){return"Peça "+askFor(r)+". Diga: \"Bom dia! Aqui é a "+(me||"[seu nome]")+", do polo UniFECAF de São José dos Campos. Posso falar com "+askFor(r)+"? É sobre uma ação de orientação sobre faculdade que queremos fazer aí entre 7 e 12 de dezembro.\""}
 function isDue(r){if(r.status==="A contatar")return true;if((r.status==="Sem resposta"||r.status==="Aguardando retorno")&&r.proximo&&r.proximo<=todayISO())return true;return false}
 function tries(r){return(r.hist||[]).filter(h=>h.acao==="Não atendeu").length}
 
@@ -349,8 +399,8 @@ function renderPainel(){
 
 function renderRoteiro(){
   document.querySelectorAll(".nm").forEach(e=>e.textContent=me||"[seu nome]");
-  $("#msgLoja").textContent=msgFor(null);
-  $("#msgRH").textContent=msgFor({tipo:"Empresa (RH)",nome:""}).replace(" da ,",",");
+  $("#msgLoja").textContent=msgFor(null,"primeiro");
+  $("#msgRH").textContent=msgFor({tipo:"Empresa (RH)",nome:""},"primeiro");
 }
 
 function render(){
@@ -361,17 +411,25 @@ function render(){
 }
 
 /* ---------- ficha ---------- */
-function openSheet(id){openId=id;$("#sheet").classList.add("open");$("#sheetBack").classList.add("open");renderSheet();setTimeout(()=>{const c=$("#shClose");if(c)c.focus()},0)}
+function openSheet(id){openId=id;msgDraft=null;$("#sheet").classList.add("open");$("#sheetBack").classList.add("open");renderSheet();setTimeout(()=>{const c=$("#shClose");if(c)c.focus()},0)}
 function closeSheet(){openId=null;$("#sheet").classList.remove("open");$("#sheetBack").classList.remove("open")}
 $("#sheetBack").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId)closeSheet()});
-let bookingOpen=false;
+let bookingOpen=false; let msgDraft=null;
 function renderSheet(){
   const r=rows.find(x=>x.id===openId);if(!r){closeSheet();return}
   const keepNote=$("#shNote")?$("#shNote").value:"";
   const sc=ST[r.status]||"acontatar";
   const tel=r.telefone?'<a class="btn" href="tel:+55'+digits(r.telefone)+'">Ligar · '+esc(r.telefone)+'</a>':'<span class="tag">Sem telefone: ir pessoalmente</span>';
-  const wa=isCell(r.telefone)?'<a class="btn" href="'+esc(waLink(r))+'" target="_blank" rel="noopener">WhatsApp com mensagem pronta</a>':"";
+  if(!msgDraft||msgDraft.id!==r.id){msgDraft={id:r.id,mom:defaultMoment(r),text:null}}
+  const mtext=msgDraft.text!=null?msgDraft.text:msgFor(r,msgDraft.mom);
+  const MOMS=[["primeiro","Primeiro contato"],["retomar","Retomar"],["confirmar","Confirmar ação"]];
+  const msgSec='<div class="sec"><h3>Mensagem sugerida</h3>'+
+    '<div class="chips" style="margin-bottom:8px">'+MOMS.map(([k,l])=>'<button class="chip" data-mom="'+k+'" aria-pressed="'+(msgDraft.mom===k)+'">'+l+'</button>').join("")+'</div>'+
+    '<label class="field" for="shMsg">Dá para editar antes de mandar<textarea id="shMsg" style="min-height:150px">'+esc(mtext)+'</textarea></label>'+
+    '<div class="contact" style="margin-top:8px"><button class="btn small" data-act="copiarmsg">Copiar mensagem</button>'+
+    (isCell(r.telefone)?'<a class="btn small primary" id="shWa" href="'+esc(waLinkText(r,mtext))+'" target="_blank" rel="noopener">Abrir no WhatsApp</a>':'<span class="tag">Número fixo: use a mensagem como roteiro ou mande por outro canal</span>')+'</div>'+
+    '<p class="count" style="margin:10px 0 0"><b>Se for ligar:</b> '+esc(callLine(r))+'</p></div>';
   const ag=r.agenda||{};
   const defTeam=ag.equipe||TEAM_OF[r.resp]||"1";
   const hist=(r.hist||[]).slice().reverse().map(h=>'<li><div><b>'+esc(h.acao)+'</b>'+(h.nota?' · '+esc(h.nota):"")+'</div><div class="when">'+esc(h.por||"")+' · '+esc(new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</div></li>').join("");
@@ -379,9 +437,9 @@ function renderSheet(){
   '<div class="hd"><h2 id="shTitle">'+esc(r.nome)+'</h2><button class="btn small" id="shClose" aria-label="Fechar">Fechar</button></div>'+
   '<div class="bd">'+
    '<div class="tags"><span class="pill s-'+sc+'">'+esc(r.status)+'</span><span class="tag">'+esc(r.tipo)+'</span>'+(tries(r)?'<span class="tag">'+tries(r)+' tentativa(s)</span>':'')+(r.proximo&&r.status!=="Agendado"&&r.status!=="Recusou"?'<span class="tag">Retomar '+fmtDate(r.proximo)+'</span>':'')+'</div>'+
-   '<div class="sec"><h3>Contato</h3><div class="contact">'+tel+wa+'<a class="btn" href="'+esc(mapLink(r))+'" target="_blank" rel="noopener">Ver no mapa</a></div></div>'+
+   '<div class="sec"><h3>Contato</h3><div class="contact">'+tel+'<a class="btn" href="'+esc(mapLink(r))+'" target="_blank" rel="noopener">Ver no mapa</a></div></div>'+
    '<dl class="kv"><dt>Endereço</dt><dd>'+esc(r.endereco)+'</dd><dt>Bairro</dt><dd>'+esc(r.bairro)+' · '+esc(r.cidade)+'</dd><dt>Região</dt><dd>'+esc(r.regiao)+'</dd><dt>Quem liga</dt><dd><select id="shResp" aria-label="Quem liga">'+PEOPLE.map(p=>'<option'+(p===r.resp?' selected':'')+'>'+p+'</option>').join("")+'</select></dd>'+(r.obs?'<dt>Dica</dt><dd>'+esc(r.obs)+'</dd>':'')+'</dl>'+
-   '<div class="sec"><h3>O que aconteceu?</h3>'+
+   msgSec+'<div class="sec"><h3>O que aconteceu?</h3>'+
     '<label class="field" for="shNote">Anotação (opcional): com quem falou, o que disseram<textarea id="shNote">'+esc(keepNote)+'</textarea></label>'+
     '<div class="actions" style="margin-top:8px">'+
      '<button class="btn" data-act="nao">Não atendeu</button>'+
@@ -431,6 +489,8 @@ async function write(r,patch,acao){
 }
 $("#sheet").addEventListener("click",async e=>{
   if(e.target.id==="shClose"){closeSheet();return}
+  const mb=e.target.closest("[data-mom]");
+  if(mb){const r0=rows.find(x=>x.id===openId);msgDraft={id:openId,mom:mb.dataset.mom,text:null};renderSheet();return}
   const b=e.target.closest("[data-act]");if(!b)return;
   const r=rows.find(x=>x.id===openId);if(!r)return;
   const a=b.dataset.act;
@@ -440,6 +500,7 @@ $("#sheet").addEventListener("click",async e=>{
     else if(a==="aguardando")await write(r,{status:"Aguardando retorno",proximo:addBizDays(2)},"Falei, vão retornar");
     else if(a==="recusou")await write(r,{status:"Recusou",proximo:""},"Recusou");
     else if(a==="anotar"){if(!$("#shNote").value.trim()){toast("Escreva a anotação primeiro");return}await write(r,{},"Anotação")}
+    else if(a==="copiarmsg"){const t=$("#shMsg").value;try{await navigator.clipboard.writeText(t);toast("Mensagem copiada")}catch(_){$("#shMsg").select();toast("Selecionei o texto: use Ctrl+C")}}
     else if(a==="agendar"){bookingOpen=true;renderSheet();const d=$("#bDia");if(d)d.focus()}
     else if(a==="fecharbook"){bookingOpen=false;renderSheet()}
     else if(a==="confirmar"){
@@ -449,6 +510,9 @@ $("#sheet").addEventListener("click",async e=>{
     }
     else if(a==="desagendar"){await write(r,{status:"Aguardando retorno",agenda:null,proximo:addBizDays(1)},"Agendamento cancelado");bookingOpen=false}
   } finally { b.disabled=false }
+});
+$("#sheet").addEventListener("input",e=>{
+  if(e.target.id==="shMsg"&&msgDraft){msgDraft.text=e.target.value;const w=$("#shWa");const r=rows.find(x=>x.id===openId);if(w&&r)w.href=waLinkText(r,e.target.value)}
 });
 $("#sheet").addEventListener("change",async e=>{
   if(e.target.id==="shResp"){const r=rows.find(x=>x.id===openId);if(r&&e.target.value!==r.resp)await write(r,{resp:e.target.value},"Passou para "+e.target.value)}
