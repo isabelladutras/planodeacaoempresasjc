@@ -210,10 +210,10 @@ h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
         <li>Se precisa falar com outra pessoa: pegue o nome e marque <b>Aguardando retorno</b>. O sistema te lembra em 2 dias úteis.</li>
         <li>Em empresa (RH): ofereça a ação no refeitório ou na troca de turno, para os colaboradores.</li>
       </ol>
-      <p><b>Mensagem de WhatsApp (loja)</b></p>
+      <p><b>WhatsApp: 1ª mensagem (curta, só para abrir conversa)</b></p>
       <div class="msgbox" id="msgLoja"></div>
       <button class="btn small" data-copy="msgLoja">Copiar mensagem</button>
-      <p><b>Mensagem de WhatsApp (empresa / RH)</b></p>
+      <p><b>WhatsApp: depois que responderem (a proposta)</b></p>
       <div class="msgbox" id="msgRH"></div>
       <button class="btn small" data-copy="msgRH">Copiar mensagem</button>
     </div>
@@ -283,47 +283,71 @@ function kindOf(r){
 function nearPolo(r){return!!r&&(/Parque Industrial/i.test(r.bairro||"")||/Bacabal/i.test(r.endereco||""))}
 const ASK={loja:"o gerente da loja",farmacia:"o gerente da farmácia",shopping:"o marketing do shopping",rh:"alguém do RH",hospital:"alguém do RH",parque:"a administração do parque",simpatia:"o gerente da loja",simpatiaCD:"alguém do RH ou do marketing da rede"};
 function askFor(r){return ASK[kindOf(r)]}
-function defaultMoment(r){if(!r)return"primeiro";if(r.status==="Agendado")return"confirmar";if(r.status==="Sem resposta"||r.status==="Aguardando retorno")return"retomar";return"primeiro"}
-function msgFor(r,mom){
-  mom=mom||defaultMoment(r);
-  const nome=me||"[seu nome]", k=kindOf(r), emp=r&&r.nome?r.nome:"";
-  const eu="Aqui é a "+nome+", do polo UniFECAF de São José dos Campos (Rua Bacabal, 2250 – Parque Industrial).";
+function defaultMoment(r){if(!r)return"abertura";if(r.status==="Agendado")return"confirmar";if(r.status==="Sem resposta"||r.status==="Aguardando retorno")return"retomar";return"abertura"}
+function hashId(t){let h=0;for(const c of String(t||""))h=(h*31+c.charCodeAt(0))>>>0;return h}
+function saud(){const h=new Date().getHours();return h<12?"Bom dia":h<18?"Boa tarde":"Boa noite"}
+const MOMENTOS=[["abertura","1ª mensagem"],["proposta","Depois que responderem"],["retomar","Retomar"],["confirmar","Confirmar"],["vespera","Lembrete na véspera"]];
+function msgOptions(r,mom){
+  const nome=me||"[seu nome]", k=kindOf(r);
+  const emp=r&&r.nome?r.nome:"";
   const marca=emp.split(" – ")[0].replace(/\s*\(.*\)$/,"");
-  const oi=marca?"Olá, equipe "+marca+"! Tudo bem? ":"Olá! Tudo bem? ";
-  const perto=nearPolo(r)?" Estamos aqui pertinho de vocês, no mesmo bairro.":"";
-  if(mom==="confirmar"){
-    const ag=(r&&r.agenda)||{};
-    const DIA={"2026-12-07":"segunda, 07/12","2026-12-08":"terça, 08/12","2026-12-09":"quarta, 09/12","2026-12-10":"quinta, 10/12","2026-12-11":"sexta, 11/12","2026-12-12":"sábado, 12/12"};
-    const quando=[DIA[ag.dia]||"",ag.turno?ag.turno.toLowerCase():"",ag.horario?"das "+ag.horario:""].filter(Boolean).join(", ");
-    return oi+eu+" Passando para confirmar a nossa ação de orientação sobre faculdade aí com vocês: "+(quando||"[dia e horário]")+". Vamos em duas pessoas, com uma mesa pequena e um banner, sem atrapalhar o movimento. Se mudar alguma coisa, é só me avisar por aqui. Obrigada!";
+  const unidade=r&&r.bairro&&r.bairro!=="Centro"?", unidade "+r.bairro:(r&&r.bairro==="Centro"?", unidade do Centro":"");
+  const pessoal=marca?marca+unidade:"a empresa";
+  const perto=nearPolo(r)?", aqui no Parque Industrial, pertinho de vocês":"";
+  const QUANDO={loja:"antes de abrir, no intervalo ou na troca de turno",farmacia:"antes de abrir, no intervalo ou na troca de turno",simpatia:"antes de abrir, no intervalo ou na troca de turno",rh:"no refeitório, no intervalo ou na troca de turno",simpatiaCD:"no refeitório, no intervalo ou na troca de turno",hospital:"na troca de plantão ou perto do refeitório",parque:"perto da praça de alimentação, no horário de almoço",shopping:"num espaço do shopping, no horário que for melhor para vocês"};
+  const quando=QUANDO[k]||QUANDO.rh;
+  const equipe=k==="shopping"?"os colaboradores das lojas":k==="parque"?"quem trabalha nas empresas do parque":"a equipe";
+  const s1=saud();
+  if(mom==="abertura"){
+    if(k==="simpatia"&&r&&/Parque Industrial/i.test(r.nome||""))
+      return [s1+", tudo bem? 😊 Aqui é a "+nome+", da UniFECAF. Já tínhamos conversado com vocês sobre fazer um bate-papo com a equipe numa segunda-feira. Queria saber se a segunda, 07/12, fica boa e qual horário é melhor para vocês."];
+    const ask=k==="shopping"?"com quem eu falo sobre ações no shopping":k==="rh"||k==="hospital"||k==="simpatiaCD"?"com quem eu converso sobre o RH ou a equipe de vocês":k==="parque"?"com quem eu falo sobre o uso dos espaços do parque":"com quem eu falo sobre a equipe da loja";
+    return [
+      s1+", tudo bem? 😊 Aqui é a "+nome+", da UniFECAF. Falo com "+pessoal+"? Queria saber "+ask+".",
+      s1+"! Meu nome é "+nome+", sou da UniFECAF, do nosso polo novo aqui em São José"+perto+". Você pode me dizer "+ask+"?",
+      s1+", tudo bem por aí? Aqui é a "+nome+" 🙂 Sou da UniFECAF, que acabou de chegar em São José dos Campos, e estou me apresentando para as empresas da região. Pode me ajudar a saber "+ask+"?"
+    ];
+  }
+  if(mom==="proposta"){
+    const sim=k==="simpatia"&&!(r&&/Parque Industrial/i.test(r.nome||""))?" Já estamos combinando com o Simpatia na loja do Parque Industrial e queremos levar também para vocês.":"";
+    if(k==="shopping") return [
+      "Que bom falar com você! A UniFECAF acabou de abrir um polo em São José dos Campos e, de 7 a 12/12, estamos fazendo uma semana de orientação sobre faculdade na cidade. Queríamos muito estar aí no shopping por algumas horas, com uma mesa pequena, para conversar com os colaboradores das lojas e com quem passa. Como funciona para ter um espaço assim por um dia? Se tiver valor, me passa que eu vejo por aqui.",
+      "Obrigada por responder! Vou ser bem rápida: somos do polo novo da UniFECAF em São José. Entre 7 e 12/12 queremos montar uma mesinha por algumas horas para tirar dúvidas sobre faculdade de quem trabalha e de quem passa pelo shopping. Vocês têm algum espaço para ativação assim? Me conta como funciona e quanto custa, por favor."
+    ];
+    return [
+      "Que bom falar com você! A UniFECAF acabou de abrir um polo novo em São José"+perto+". De 7 a 12/12 vamos passar em algumas empresas da cidade para um bate-papo rapidinho com "+equipe+", uns 20 minutos, sobre como começar ou retomar a faculdade, com benefícios e condições especiais para quem trabalha com vocês."+sim+" Não tem custo nenhum para vocês e a gente se adapta ao melhor horário ("+quando+"). Qual dia dessa semana fica melhor?",
+      "Obrigada por responder! 😊 Vou ser bem rápida: muita gente tem vontade de fazer faculdade e não sabe por onde começar. Por isso, de 7 a 12/12, estamos levando um bate-papo de uns 20 minutinhos para as equipes das empresas da região, com condições especiais para os colaboradores."+sim+" É sem custo e sem atrapalhar o trabalho, pode ser "+quando+". Teria um dia nessa semana que funcione para vocês?",
+      "Que bom! Então, é bem simples: a gente vai até vocês entre 7 e 12/12, conversa uns 20 minutos com "+equipe+" sobre faculdade e apresenta os benefícios e condições que temos para colaboradores de empresas parceiras."+sim+" Vocês não precisam preparar nada nem têm custo. Que dia e horário ficam melhores?"
+    ];
   }
   if(mom==="retomar"){
-    if(k==="rh"||k==="hospital"||k==="parque"||k==="simpatiaCD")
-      return oi+eu+" Estou retomando o contato sobre a ação de orientação sobre faculdade que queremos levar para os colaboradores de vocês entre 7 e 12/12. Conseguiram ver internamente? Se ficar mais fácil, posso mandar os detalhes por e-mail ou passar aí pessoalmente.";
-    return oi+eu+" Estou retomando o contato sobre a mesinha de orientação sobre faculdade que queremos montar aí na loja entre 7 e 12/12, por algumas horas. Conseguiram ver com a gerência? Se ficar mais fácil, posso passar aí pessoalmente para conversar.";
+    const t=r?tries(r):0;
+    const lst=[
+      "Oi, tudo bem? Aqui é a "+nome+", da UniFECAF, de novo 😊 Passando só para saber se conseguiu ver sobre o bate-papo com a equipe. Ainda tenho alguns horários livres entre 7 e 12/12. Se preferir, passo aí pessoalmente para explicar em 5 minutinhos.",
+      "Oi! Sei que fim de ano é corrido, então vou ser breve 🙂 Ainda dá para encaixar vocês na nossa semana de bate-papos com as equipes (7 a 12/12). É rapidinho, sem custo e no horário que for melhor para vocês. Quer que eu reserve um horário?",
+      "Oi, aqui é a "+nome+", da UniFECAF. Prometo que é a última mensagem 😅 Se agora não for o momento, tudo bem! Mas se quiserem receber a gente entre 7 e 12/12, é só me responder com o melhor dia que eu organizo tudo."
+    ];
+    return t>=3?[lst[2],lst[0],lst[1]]:t===2?[lst[1],lst[0],lst[2]]:lst;
   }
-  switch(k){
-    case"simpatia":
-      if(r&&/Parque Industrial/i.test(r.nome||""))
-        return oi+eu+" Conversamos com a equipe de vocês sobre fazer a nossa ação de orientação sobre faculdade numa segunda-feira. Queria confirmar se pode ser na segunda, 07/12, aí na loja de vocês, e qual horário fica melhor. Levamos uma mesa pequena e um banner, num canto que não atrapalhe o movimento.";
-      return oi+eu+" Já estamos conversando com o Simpatia sobre uma ação de orientação sobre faculdade na loja do Parque Industrial e gostaríamos de levar a mesma ação também para a unidade de vocês, em algum dia entre 7 e 12/12. É uma mesa pequena por algumas horas, sem atrapalhar o movimento. Com quem posso alinhar?";
-    case"simpatiaCD":
-      return oi+eu+" Estamos organizando com o Simpatia uma ação de orientação sobre faculdade nas lojas entre 7 e 12/12 e gostaríamos de levar a mesma ação para os colaboradores do centro de distribuição, no refeitório ou na troca de turno, por cerca de uma hora. Com quem posso conversar sobre isso?";
-    case"farmacia":
-      return oi+eu+perto+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade em vários pontos da cidade. A ideia é ficar com uma mesinha na entrada da farmácia por algumas horas, sem atrapalhar o atendimento, tirando dúvidas de quem quer começar uma graduação. Teria um dia nessa semana que funcione para vocês? Com quem posso falar?";
-    case"shopping":
-      return oi+eu+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade em São José e gostaríamos de saber como funciona para ter um espaço de ativação no shopping por um dia (mesa ou quiosque pequeno). Com quem do marketing posso falar sobre valores e disponibilidade?";
-    case"hospital":
-      return oi+eu+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade e gostaríamos de levar uma ação para os colaboradores do hospital, perto do refeitório ou na troca de plantão, por cerca de uma hora. Muita gente da área da saúde quer começar ou continuar a graduação, e a gente tira as dúvidas ali mesmo. Com quem do RH posso conversar?";
-    case"parque":
-      return oi+eu+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade e gostaríamos de montar uma mesa por algumas horas perto da praça de alimentação do parque, para quem trabalha nas empresas daí. Com quem posso falar sobre o uso do espaço?";
-    case"rh":
-      return oi+eu+perto+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade e gostaríamos de levar uma ação para os colaboradores"+(emp?" da "+marca:"")+", no refeitório ou na troca de turno, por cerca de uma hora. Muita gente quer começar ou retomar a graduação e não sabe por onde começar; a gente tira as dúvidas ali mesmo. Com quem do RH posso conversar?";
-    default:
-      return oi+eu+perto+" Entre 7 e 12/12 vamos fazer uma semana de orientação sobre faculdade em vários pontos da cidade, e a loja de vocês tem muito movimento. A ideia é montar uma mesinha por algumas horas, num canto que não atrapalhe, tirando dúvidas de quem quer começar uma graduação. Teria um dia nessa semana que funcione para vocês? Com quem posso falar?";
-  }
+  const ag=(r&&r.agenda)||{};
+  const DIA={"2026-12-07":"segunda, 07/12","2026-12-08":"terça, 08/12","2026-12-09":"quarta, 09/12","2026-12-10":"quinta, 10/12","2026-12-11":"sexta, 11/12","2026-12-12":"sábado, 12/12"};
+  const quandoAg=[DIA[ag.dia]||"[dia]",ag.horario?"das "+ag.horario:(ag.turno?"de "+ag.turno.toLowerCase():"")].filter(Boolean).join(", ");
+  if(mom==="confirmar") return [
+    "Oi! Tudo certo para o nosso bate-papo com a equipe de vocês na "+quandoAg+" 😊 Vamos em duas pessoas e chegamos uns 10 minutinhos antes. Se precisar mudar alguma coisa, é só me chamar aqui. Obrigada pela parceria!",
+    "Oi, aqui é a "+nome+", da UniFECAF. Só confirmando: nosso bate-papo com a equipe fica para "+quandoAg+". Precisa de alguma coisa da nossa parte, como lista de presença ou horário certinho de chegada? Obrigada! 🙂"
+  ];
+  return [
+    "Oi, tudo bem? 😊 Passando para lembrar que amanhã é o nosso bate-papo com a equipe de vocês, "+quandoAg+". Continua tudo certo por aí? Até amanhã!",
+    "Oi! Amanhã a gente se vê: "+quandoAg+" 🙂 Se tiver algum horário melhor para pegar mais gente da equipe, me avisa que a gente ajusta. Obrigada!"
+  ];
 }
-function callLine(r){return"Peça "+askFor(r)+". Diga: \"Bom dia! Aqui é a "+(me||"[seu nome]")+", do polo UniFECAF de São José dos Campos. Posso falar com "+askFor(r)+"? É sobre uma ação de orientação sobre faculdade que queremos fazer aí entre 7 e 12 de dezembro.\""}
+function msgFor(r,mom,v){
+  mom=mom||defaultMoment(r);
+  const o=msgOptions(r,mom);
+  const i=(v==null?(mom==="retomar"?0:hashId(r&&r.id)):v)%o.length;
+  return o[i];
+}
+function callLine(r){return"Peça "+askFor(r)+". Diga: \""+saud()+"! Meu nome é "+(me||"[seu nome]")+", sou da UniFECAF, do nosso polo novo aqui em São José. Posso falar com "+askFor(r)+"? É rapidinho, é sobre um bate-papo com a equipe de vocês.\" Quando a pessoa atender, use o texto de \"Depois que responderem\" como roteiro."}
 function isDue(r){if(r.status==="A contatar")return true;if((r.status==="Sem resposta"||r.status==="Aguardando retorno")&&r.proximo&&r.proximo<=todayISO())return true;return false}
 function tries(r){return(r.hist||[]).filter(h=>h.acao==="Não atendeu").length}
 
@@ -399,8 +423,8 @@ function renderPainel(){
 
 function renderRoteiro(){
   document.querySelectorAll(".nm").forEach(e=>e.textContent=me||"[seu nome]");
-  $("#msgLoja").textContent=msgFor(null,"primeiro");
-  $("#msgRH").textContent=msgFor({tipo:"Empresa (RH)",nome:""},"primeiro");
+  $("#msgLoja").textContent=msgFor(null,"abertura",0);
+  $("#msgRH").textContent=msgFor({tipo:"Empresa (RH)",nome:"",id:"x"},"proposta",0);
 }
 
 function render(){
@@ -421,15 +445,16 @@ function renderSheet(){
   const keepNote=$("#shNote")?$("#shNote").value:"";
   const sc=ST[r.status]||"acontatar";
   const tel=r.telefone?'<a class="btn" href="tel:+55'+digits(r.telefone)+'">Ligar · '+esc(r.telefone)+'</a>':'<span class="tag">Sem telefone: ir pessoalmente</span>';
-  if(!msgDraft||msgDraft.id!==r.id){msgDraft={id:r.id,mom:defaultMoment(r),text:null}}
-  const mtext=msgDraft.text!=null?msgDraft.text:msgFor(r,msgDraft.mom);
-  const MOMS=[["primeiro","Primeiro contato"],["retomar","Retomar"],["confirmar","Confirmar ação"]];
+  if(!msgDraft||msgDraft.id!==r.id){msgDraft={id:r.id,mom:defaultMoment(r),v:null,text:null}}
+  const mtext=msgDraft.text!=null?msgDraft.text:msgFor(r,msgDraft.mom,msgDraft.v);
+  const nOpts=msgOptions(r,msgDraft.mom).length;
+  const MOMS=MOMENTOS;
   const msgSec='<div class="sec"><h3>Mensagem sugerida</h3>'+
     '<div class="chips" style="margin-bottom:8px">'+MOMS.map(([k,l])=>'<button class="chip" data-mom="'+k+'" aria-pressed="'+(msgDraft.mom===k)+'">'+l+'</button>').join("")+'</div>'+
     '<label class="field" for="shMsg">Dá para editar antes de mandar<textarea id="shMsg" style="min-height:150px">'+esc(mtext)+'</textarea></label>'+
-    '<div class="contact" style="margin-top:8px"><button class="btn small" data-act="copiarmsg">Copiar mensagem</button>'+
+    '<div class="contact" style="margin-top:8px"><button class="btn small" data-act="copiarmsg">Copiar mensagem</button>'+(nOpts>1?'<button class="btn small" data-act="outraversao">Outra versão</button>':'')+
     (isCell(r.telefone)?'<a class="btn small primary" id="shWa" href="'+esc(waLinkText(r,mtext))+'" target="_blank" rel="noopener">Abrir no WhatsApp</a>':'<span class="tag">Número fixo: use a mensagem como roteiro ou mande por outro canal</span>')+'</div>'+
-    '<p class="count" style="margin:10px 0 0"><b>Se for ligar:</b> '+esc(callLine(r))+'</p></div>';
+    '<p class="count" style="margin:10px 0 0">'+(msgDraft.mom==="abertura"?'<b>Dica:</b> mande só essa mensagem curta. Quando responderem, clique em "Depois que responderem" e mande a proposta. ':'')+'<b>Se for ligar:</b> '+esc(callLine(r))+'</p></div>';
   const ag=r.agenda||{};
   const defTeam=ag.equipe||TEAM_OF[r.resp]||"1";
   const hist=(r.hist||[]).slice().reverse().map(h=>'<li><div><b>'+esc(h.acao)+'</b>'+(h.nota?' · '+esc(h.nota):"")+'</div><div class="when">'+esc(h.por||"")+' · '+esc(new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</div></li>').join("");
@@ -490,7 +515,7 @@ async function write(r,patch,acao){
 $("#sheet").addEventListener("click",async e=>{
   if(e.target.id==="shClose"){closeSheet();return}
   const mb=e.target.closest("[data-mom]");
-  if(mb){const r0=rows.find(x=>x.id===openId);msgDraft={id:openId,mom:mb.dataset.mom,text:null};renderSheet();return}
+  if(mb){msgDraft={id:openId,mom:mb.dataset.mom,v:null,text:null};renderSheet();return}
   const b=e.target.closest("[data-act]");if(!b)return;
   const r=rows.find(x=>x.id===openId);if(!r)return;
   const a=b.dataset.act;
@@ -500,6 +525,7 @@ $("#sheet").addEventListener("click",async e=>{
     else if(a==="aguardando")await write(r,{status:"Aguardando retorno",proximo:addBizDays(2)},"Falei, vão retornar");
     else if(a==="recusou")await write(r,{status:"Recusou",proximo:""},"Recusou");
     else if(a==="anotar"){if(!$("#shNote").value.trim()){toast("Escreva a anotação primeiro");return}await write(r,{},"Anotação")}
+    else if(a==="outraversao"){const base=msgDraft.v==null?(msgDraft.mom==="retomar"?0:hashId(r.id)):msgDraft.v;msgDraft.v=base+1;msgDraft.text=null;renderSheet();return}
     else if(a==="copiarmsg"){const t=$("#shMsg").value;try{await navigator.clipboard.writeText(t);toast("Mensagem copiada")}catch(_){$("#shMsg").select();toast("Selecionei o texto: use Ctrl+C")}}
     else if(a==="agendar"){bookingOpen=true;renderSheet();const d=$("#bDia");if(d)d.focus()}
     else if(a==="fecharbook"){bookingOpen=false;renderSheet()}
