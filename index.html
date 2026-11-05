@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ações SJC — Contatos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: barra fixa no topo com abas; lista de cartões em uma coluna no celular, duas no desktop; ficha abre em painel por cima */
+  --bg:#f3f5f9; --surface:#ffffff; --ink:#152238; --muted:#5b6880; --line:#dde2ec;
+  --accent:#1f4fd1; --accent-ink:#ffffff; --warm:#f2a516;
+  --ok:#1a8a52; --ok-bg:#e3f5ec; --wait:#a86b00; --wait-bg:#fff3d6; --no:#b3261e; --no-bg:#fde8e6; --idle:#5b6880; --idle-bg:#eceff5; --try:#6a3fc2; --try-bg:#efe8fc;
+  --display:"Archivo", "Arial Narrow", Arial, sans-serif; --body:"Source Sans 3", "Segoe UI", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1522; --surface:#182133; --ink:#e8edf6; --muted:#9aa7bf; --line:#2a3550;
+    --accent:#6b93ff; --accent-ink:#0b1020; --warm:#f5b740;
+    --ok:#5fd59a; --ok-bg:#163527; --wait:#f2c45a; --wait-bg:#3a2e10; --no:#ff8a80; --no-bg:#3d1b19; --idle:#a9b4c9; --idle-bg:#232d42; --try:#c3a6ff; --try-bg:#2c2346;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1522; --surface:#182133; --ink:#e8edf6; --muted:#9aa7bf; --line:#2a3550;
+  --accent:#6b93ff; --accent-ink:#0b1020; --warm:#f5b740;
+  --ok:#5fd59a; --ok-bg:#163527; --wait:#f2c45a; --wait-bg:#3a2e10; --no:#ff8a80; --no-bg:#3d1b19; --idle:#a9b4c9; --idle-bg:#232d42; --try:#c3a6ff; --try-bg:#2c2346;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--warm);outline-offset:2px}
+header{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 16px 8px;max-width:1200px;margin:0 auto}
+h1{font-family:var(--display);font-weight:800;font-size:20px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 small{display:block;font-family:var(--body);font-weight:600;font-size:13px;color:var(--muted);letter-spacing:0}
+.me{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.me select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-weight:700;color:var(--ink)}
+nav{display:flex;gap:4px;padding:0 12px;max-width:1200px;margin:0 auto;overflow-x:auto}
+nav button{border:0;background:none;padding:10px 12px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.note{padding:10px 14px;border-radius:10px;background:var(--wait-bg);color:var(--ink);font-size:14px;margin-bottom:12px}
+.note.err{background:var(--no-bg)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.filters select,.filters input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0}
+.filters input{flex:1 1 180px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip b{font-variant-numeric:tabular-nums}
+.count{font-size:14px;color:var(--muted);margin:0 0 10px}
+.list{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:820px){.list{grid-template-columns:1fr 1fr}}
+.card{display:grid;grid-template-columns:6px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-align:left;padding:0;width:100%}
+.card .stripe{background:var(--idle)}
+.card .in{padding:12px 14px;display:grid;gap:6px;min-width:0}
+.card .row1{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.card .name{font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.card .meta{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.s-acontatar{background:var(--idle-bg);color:var(--idle)}
+.s-semresposta{background:var(--try-bg);color:var(--try)}
+.s-aguardando{background:var(--wait-bg);color:var(--wait)}
+.s-agendado{background:var(--ok-bg);color:var(--ok)}
+.s-recusou{background:var(--no-bg);color:var(--no)}
+.st-acontatar{background:var(--idle)}.st-semresposta{background:var(--try)}.st-aguardando{background:var(--warm)}.st-agendado{background:var(--ok)}.st-recusou{background:var(--no)}
+.due{font-size:12px;font-weight:700;color:var(--no)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.no{color:var(--no)}
+.btn.small{min-height:34px;padding:6px 10px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* painel da ficha */
+.sheet-back{position:fixed;inset:0;background:rgba(10,15,30,.45);z-index:20;display:none}
+.sheet{position:fixed;z-index:21;right:0;top:0;bottom:0;width:min(520px,100%);background:var(--surface);overflow-y:auto;display:none;box-shadow:-8px 0 30px rgba(0,0,0,.18)}
+.sheet.open,.sheet-back.open{display:block}
+.sheet .hd{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;gap:10px;align-items:flex-start}
+.sheet .hd h2{font-family:var(--display);font-size:20px;margin:0;flex:1;text-wrap:balance}
+.sheet .bd{padding:16px;display:grid;gap:16px}
+.sec h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px}
+.contact{display:flex;flex-wrap:wrap;gap:8px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:15px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;overflow-wrap:anywhere}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+textarea,.field input,.field select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+textarea{min-height:64px;resize:vertical}
+.field{display:grid;gap:4px;font-size:14px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bookbox{border:2px solid var(--ok);border-radius:12px;padding:12px;display:grid;gap:10px}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.hist li{font-size:14px;border-left:3px solid var(--line);padding-left:10px}
+.hist .when{color:var(--muted);font-size:12px}
+/* agenda */
+.days{display:grid;gap:12px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.day h3{font-family:var(--display);margin:0 0 8px;font-size:17px}
+.slots{display:grid;grid-template-columns:1fr;gap:8px}
+@media (min-width:820px){.slots{grid-template-columns:repeat(4,1fr)}}
+.slot{border:1px dashed var(--line);border-radius:10px;padding:8px 10px;min-height:64px}
+.slot.filled{border-style:solid;border-color:var(--ok);background:var(--ok-bg)}
+.slot.over{border-color:var(--warm)}
+.slot .lab{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.slot button{display:block;border:0;background:none;padding:2px 0;text-align:left;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+.slot .free{font-size:14px;color:var(--muted)}
+/* painel */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .v{font-family:var(--display);font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.tile .l{font-size:14px;color:var(--muted)}
+.bar{height:8px;background:var(--idle-bg);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--ok)}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:13px;color:var(--muted);font-weight:700}
+.script{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px;max-width:760px}
+.script p{margin:0}
+.script ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.msgbox{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:15px;white-space:pre-wrap}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:40;display:none}
+.toast.show{display:block}
+h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}.card:hover{border-color:var(--accent)}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Ações SJC — Contatos<small>Semana de ações UniFECAF · 07 a 12/12 · Polo Rua Bacabal, 2250</small></h1>
+    <label class="me" for="meSel">Você é
+      <select id="meSel">
+        <option value="">escolha</option>
+        <option>Isabella</option><option>Alice</option><option>Flávia</option><option>Angélica</option>
+      </select>
+    </label>
+    <button class="btn small" id="btnSair" hidden>Sair</button>
+  </div>
+  <nav role="tablist" id="navTabs" hidden>
+    <button role="tab" id="tab-lista" aria-selected="true" data-view="lista">Ligar</button>
+    <button role="tab" id="tab-agenda" aria-selected="false" data-view="agenda">Agenda</button>
+    <button role="tab" id="tab-painel" aria-selected="false" data-view="painel">Painel</button>
+    <button role="tab" id="tab-roteiro" aria-selected="false" data-view="roteiro">Roteiro</button>
+    <button role="tab" id="tab-nova" aria-selected="false" data-view="nova">+ Empresa</button>
+  </nav>
+</header>
+<section id="login" hidden style="max-width:380px;margin:40px auto;padding:0 16px">
+  <form id="fLogin" class="script">
+    <h2 class="sec-title" style="margin:0">Entrar</h2>
+    <label class="field" for="lEmail">E-mail<input id="lEmail" type="email" autocomplete="username" required></label>
+    <label class="field" for="lSenha">Senha<input id="lSenha" type="password" autocomplete="current-password" required></label>
+    <p id="lErr" style="margin:0;color:var(--no);font-size:14px"></p>
+    <button class="btn primary" type="submit">Entrar</button>
+  </form>
+</section>
+<main id="app" hidden>
+  <div id="msg"></div>
+
+  <section id="v-lista">
+    <div class="filters">
+      <select id="fPessoa" aria-label="Carteira">
+        <option value="__me">Minha carteira</option>
+        <option value="">Todas as carteiras</option>
+        <option>Isabella</option><option>Alice</option><option>Flávia</option><option>Angélica</option>
+      </select>
+      <select id="fTipo" aria-label="Tipo">
+        <option value="">Todos os tipos</option>
+        <option>Mercado</option><option>Atacarejo</option><option>Farmácia</option><option>Shopping</option><option>Empresa / RH</option><option>Loja</option>
+      </select>
+      <select id="fRegiao" aria-label="Região"><option value="">Todas as regiões</option></select>
+      <input id="fBusca" type="search" placeholder="Buscar nome, bairro ou rua" aria-label="Buscar">
+    </div>
+    <div class="chips" id="chips"></div>
+    <p class="count" id="count"></p>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section id="v-agenda" hidden>
+    <h2 class="sec-title">Agenda das ações</h2>
+    <p class="count">Equipe 1: Alice e Angélica · Equipe 2: Isabella e Flávia · Cada equipe tem uma vaga de manhã e uma à tarde por dia.</p>
+    <div class="days" id="days"></div>
+  </section>
+
+  <section id="v-painel" hidden>
+    <h2 class="sec-title">Como estamos</h2>
+    <div class="tiles" id="tiles"></div>
+    <div class="tablewrap"><table id="tbl"></table></div>
+  </section>
+
+  <section id="v-roteiro" hidden>
+    <h2 class="sec-title">Roteiro de ligação</h2>
+    <div class="script">
+      <ol>
+        <li>Peça o <b>gerente da loja</b> (no shopping: marketing; em empresa: RH).</li>
+        <li>Apresente: "Sou <span class="nm">[seu nome]</span>, do polo UniFECAF de São José dos Campos, na Rua Bacabal, Parque Industrial. Estamos fazendo uma semana de orientação sobre faculdade na cidade, de 7 a 12 de dezembro."</li>
+        <li>Peça: "Queremos montar uma mesa pequena por algumas horas, sem atrapalhar o movimento, para tirar dúvidas de quem quer começar uma graduação. Teria um dia nessa semana que funcione pra vocês?"</li>
+        <li>Se sim: anote dia, horário, quem autorizou e o que pode montar (mesa, banner, tenda). Marque <b>Agendou</b>.</li>
+        <li>Se precisa falar com outra pessoa: pegue o nome e marque <b>Aguardando retorno</b>. O sistema te lembra em 2 dias úteis.</li>
+        <li>Em empresa (RH): ofereça a ação no refeitório ou na troca de turno, para os colaboradores.</li>
+      </ol>
+      <p><b>Mensagem de WhatsApp (loja)</b></p>
+      <div class="msgbox" id="msgLoja"></div>
+      <button class="btn small" data-copy="msgLoja">Copiar mensagem</button>
+      <p><b>Mensagem de WhatsApp (empresa / RH)</b></p>
+      <div class="msgbox" id="msgRH"></div>
+      <button class="btn small" data-copy="msgRH">Copiar mensagem</button>
+    </div>
+  </section>
+
+  <section id="v-nova" hidden>
+    <h2 class="sec-title">Adicionar empresa</h2>
+    <form id="fNova" class="script" style="max-width:560px">
+      <label class="field" for="nNome">Nome da empresa<input id="nNome" required></label>
+      <div class="grid2">
+        <label class="field" for="nTipo">Tipo
+          <select id="nTipo"><option>Supermercado</option><option>Atacarejo</option><option>Farmácia</option><option>Shopping</option><option>Empresa (RH)</option><option>Transportadora (RH)</option><option>Loja</option></select>
+        </label>
+        <label class="field" for="nResp">Quem liga
+          <select id="nResp"><option>Isabella</option><option>Alice</option><option>Flávia</option><option>Angélica</option></select>
+        </label>
+      </div>
+      <label class="field" for="nEnd">Endereço<input id="nEnd"></label>
+      <div class="grid2">
+        <label class="field" for="nBairro">Bairro<input id="nBairro"></label>
+        <label class="field" for="nCidade">Cidade<input id="nCidade" value="São José dos Campos"></label>
+      </div>
+      <label class="field" for="nTel">Telefone<input id="nTel" inputmode="tel" placeholder="(12) 99999-9999"></label>
+      <button class="btn primary" type="submit">Adicionar</button>
+    </form>
+  </section>
+</main>
+
+<div class="sheet-back" id="sheetBack"></div>
+<aside class="sheet" id="sheet" aria-modal="true" role="dialog" aria-labelledby="shTitle"></aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+const DAYS=[["2026-12-07","Seg 07/12"],["2026-12-08","Ter 08/12"],["2026-12-09","Qua 09/12"],["2026-12-10","Qui 10/12"],["2026-12-11","Sex 11/12"],["2026-12-12","Sáb 12/12"]];
+const TEAMS={"1":"Equipe 1 · Alice e Angélica","2":"Equipe 2 · Isabella e Flávia"};
+const TEAM_OF={"Alice":"1","Angélica":"1","Isabella":"2","Flávia":"2"};
+const PEOPLE=["Isabella","Alice","Flávia","Angélica"];
+const ST={"A contatar":"acontatar","Sem resposta":"semresposta","Aguardando retorno":"aguardando","Agendado":"agendado","Recusou":"recusou"};
+const $=s=>document.querySelector(s);
+let db=null, rows=[], loaded=false, openId=null, canWrite=true;
+let me=""; try{me=localStorage.getItem("acoes_me")||""}catch(e){}
+let statusFilter="pendentes";
+
+function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function addBizDays(n){const d=new Date();let k=0;while(k<n){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)k++}d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function fmtDate(iso){if(!iso)return"";const[y,m,d]=iso.split("-");return d+"/"+m}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function cat(t){t=t||"";if(/Farm/i.test(t))return"Farmácia";if(/Atacarejo/i.test(t))return"Atacarejo";if(/Shopping/i.test(t))return"Shopping";if(/Supermercado|Hipermercado|Mercado/i.test(t))return"Mercado";if(/RH|CD|Parque|Indústria|Hospital|Logística|Transport|Armazém|Distribuidora/i.test(t))return"Empresa / RH";return"Loja"}
+function digits(t){return(t||"").replace(/\D/g,"")}
+function isCell(t){const d=digits(t);return d.length===11&&d[2]==="9"}
+function waLink(r){const d=digits(r.telefone);return"https://wa.me/55"+d+"?text="+encodeURIComponent(msgFor(r))}
+function mapLink(r){return"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([r.nome,r.endereco,r.bairro,r.cidade].filter(Boolean).join(", "))}
+function isRH(r){return cat(r.tipo)==="Empresa / RH"}
+function msgFor(r){
+  const nome=me||"[seu nome]";
+  if(r&&isRH(r)) return "Olá! Aqui é a "+nome+", do polo UniFECAF de São José dos Campos (Rua Bacabal, 2250 – Parque Industrial). De 7 a 12/12 estamos fazendo uma semana de orientação sobre faculdade na cidade e gostaríamos de levar uma ação para os colaboradores"+(r?" da "+r.nome:"")+", no refeitório ou na troca de turno, por algumas horas. Com quem posso falar sobre isso?";
+  return "Olá! Aqui é a "+nome+", do polo UniFECAF de São José dos Campos (Rua Bacabal, 2250 – Parque Industrial). De 7 a 12/12 estamos fazendo uma semana de orientação sobre faculdade na cidade e gostaríamos de montar uma mesinha por algumas horas"+(r?" na "+r.nome:"")+", sem atrapalhar o movimento. Com quem posso falar sobre isso?";
+}
+function isDue(r){if(r.status==="A contatar")return true;if((r.status==="Sem resposta"||r.status==="Aguardando retorno")&&r.proximo&&r.proximo<=todayISO())return true;return false}
+function tries(r){return(r.hist||[]).filter(h=>h.acao==="Não atendeu").length}
+
+function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),2200)}
+function note(t,err){$("#msg").innerHTML=t?'<div class="note'+(err?' err':'')+'">'+esc(t)+'</div>':""}
+
+/* ---------- views ---------- */
+function setView(v){
+  document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.view===v)));
+  ["lista","agenda","painel","roteiro","nova"].forEach(x=>{$("#v-"+x).hidden=(x!==v)});
+  render();
+}
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+function curView(){const b=document.querySelector('nav button[aria-selected="true"]');return b?b.dataset.view:"lista"}
+
+function filtered(){
+  const p=$("#fPessoa").value, pess=p==="__me"?me:p, t=$("#fTipo").value, rg=$("#fRegiao").value, q=$("#fBusca").value.trim().toLowerCase();
+  return rows.filter(r=>(!pess||r.resp===pess)&&(!t||cat(r.tipo)===t)&&(!rg||r.regiao===rg)&&(!q||[r.nome,r.bairro,r.endereco,r.cidade].join(" ").toLowerCase().includes(q)));
+}
+const SF={
+  pendentes:{l:"Pra trabalhar",f:r=>r.status!=="Agendado"&&r.status!=="Recusou"},
+  hoje:{l:"Pra hoje",f:isDue},
+  aguardando:{l:"Aguardando retorno",f:r=>r.status==="Aguardando retorno"},
+  semresposta:{l:"Não atendeu",f:r=>r.status==="Sem resposta"},
+  agendado:{l:"Agendados",f:r=>r.status==="Agendado"},
+  recusou:{l:"Recusou",f:r=>r.status==="Recusou"},
+  todas:{l:"Todas",f:()=>true}
+};
+function renderList(){
+  const base=filtered();
+  $("#chips").innerHTML=Object.keys(SF).map(k=>'<button class="chip" data-sf="'+k+'" aria-pressed="'+(statusFilter===k)+'">'+SF[k].l+' <b>'+base.filter(SF[k].f).length+'</b></button>').join("");
+  const list=base.filter(SF[statusFilter].f).sort((a,b)=>(isDue(b)-isDue(a))||((a.proximo||"9")<(b.proximo||"9")?-1:(a.proximo||"9")>(b.proximo||"9")?1:0)||(a.n-b.n));
+  const pSel=$("#fPessoa").value;
+  if(pSel==="__me"&&!me){$("#count").textContent="Escolha seu nome no topo (Você é) para ver a sua carteira.";$("#list").innerHTML="";return}
+  $("#count").textContent=list.length+" empresa"+(list.length===1?"":"s");
+  $("#list").innerHTML=list.map(r=>{
+    const sc=ST[r.status]||"acontatar";
+    const due=isDue(r)&&r.status!=="A contatar"?'<span class="due">Retomar hoje</span>':(r.proximo&&(r.status==="Sem resposta"||r.status==="Aguardando retorno")?'<span class="tag">Retomar '+fmtDate(r.proximo)+'</span>':"");
+    const ag=r.status==="Agendado"&&r.agenda?'<span class="tag">'+esc(dayLabel(r.agenda.dia))+' · '+esc(r.agenda.turno)+' · Eq. '+esc(r.agenda.equipe)+'</span>':"";
+    const tr=tries(r)?'<span class="tag">'+tries(r)+' tentativa'+(tries(r)>1?'s':'')+'</span>':"";
+    return '<button class="card" data-open="'+esc(r.id)+'"><span class="stripe st-'+sc+'"></span><span class="in"><span class="row1"><span class="name">'+esc(r.nome)+'</span><span class="pill s-'+sc+'">'+esc(r.status)+'</span></span><span class="meta">'+esc(r.bairro)+(r.cidade&&r.cidade!=="São José dos Campos"?"":"")+' · '+esc(r.tipo)+(pSel===""?' · '+esc(r.resp):"")+'</span><span class="tags"><span class="tag">'+esc(r.telefone||"sem telefone")+'</span>'+tr+due+ag+'</span></span></button>';
+  }).join("")||'<p class="count">Nada aqui com esses filtros.</p>';
+}
+function dayLabel(iso){const d=DAYS.find(x=>x[0]===iso);return d?d[1]:fmtDate(iso)}
+
+function renderAgenda(){
+  const booked=rows.filter(r=>r.status==="Agendado"&&r.agenda);
+  $("#days").innerHTML=DAYS.map(([iso,lab])=>{
+    const slots=[["1","Manhã"],["1","Tarde"],["2","Manhã"],["2","Tarde"]].map(([eq,t])=>{
+      const here=booked.filter(r=>r.agenda.dia===iso&&r.agenda.equipe===eq&&r.agenda.turno===t);
+      const cls=here.length?(here.length>1?"slot filled over":"slot filled"):"slot";
+      return '<div class="'+cls+'"><div class="lab">Equipe '+eq+' · '+t+'</div>'+(here.length?here.map(r=>'<button data-open="'+esc(r.id)+'">'+esc(r.nome)+'</button><div class="free">'+esc(r.agenda.horario||"horário a combinar")+'</div>').join("")+(here.length>1?'<div class="free">Dois locais no mesmo turno: confirme se dá</div>':""):'<div class="free">Vaga livre</div>')+'</div>';
+    }).join("");
+    return '<div class="day"><h3>'+lab+'</h3><div class="slots">'+slots+'</div></div>';
+  }).join("");
+}
+
+function renderPainel(){
+  const ag=rows.filter(r=>r.status==="Agendado"&&r.agenda);
+  const filled=new Set(ag.map(r=>r.agenda.dia+r.agenda.equipe+r.agenda.turno)).size;
+  const touched=rows.filter(r=>r.status!=="A contatar").length;
+  const aguard=rows.filter(r=>r.status==="Aguardando retorno").length;
+  const hoje=rows.filter(r=>isDue(r)&&r.status!=="A contatar").length;
+  $("#tiles").innerHTML=
+    '<div class="tile"><div class="v">'+filled+' de 24</div><div class="l">vagas da agenda preenchidas</div><div class="bar"><i style="width:'+Math.round(filled/24*100)+'%"></i></div></div>'+
+    '<div class="tile"><div class="v">'+touched+' de '+rows.length+'</div><div class="l">empresas já contatadas</div><div class="bar"><i style="width:'+(rows.length?Math.round(touched/rows.length*100):0)+'%"></i></div></div>'+
+    '<div class="tile"><div class="v">'+aguard+'</div><div class="l">aguardando retorno</div></div>'+
+    '<div class="tile"><div class="v">'+hoje+'</div><div class="l">pra retomar hoje</div></div>';
+  const head='<tr><th>Carteira</th><th>Empresas</th><th>A contatar</th><th>Não atendeu</th><th>Aguardando</th><th>Agendados</th><th>Recusou</th></tr>';
+  const line=p=>{const m=rows.filter(r=>r.resp===p);const c=s=>m.filter(r=>r.status===s).length;return'<tr><td><b>'+esc(p)+'</b></td><td>'+m.length+'</td><td>'+c("A contatar")+'</td><td>'+c("Sem resposta")+'</td><td>'+c("Aguardando retorno")+'</td><td><b>'+c("Agendado")+'</b></td><td>'+c("Recusou")+'</td></tr>'};
+  $("#tbl").innerHTML=head+PEOPLE.map(line).join("");
+}
+
+function renderRoteiro(){
+  document.querySelectorAll(".nm").forEach(e=>e.textContent=me||"[seu nome]");
+  $("#msgLoja").textContent=msgFor(null);
+  $("#msgRH").textContent=msgFor({tipo:"Empresa (RH)",nome:""}).replace(" da ,",",");
+}
+
+function render(){
+  if(!loaded)return;
+  const v=curView();
+  if(v==="lista")renderList();else if(v==="agenda")renderAgenda();else if(v==="painel")renderPainel();else if(v==="roteiro")renderRoteiro();
+  if(openId)renderSheet();
+}
+
+/* ---------- ficha ---------- */
+function openSheet(id){openId=id;$("#sheet").classList.add("open");$("#sheetBack").classList.add("open");renderSheet();setTimeout(()=>{const c=$("#shClose");if(c)c.focus()},0)}
+function closeSheet(){openId=null;$("#sheet").classList.remove("open");$("#sheetBack").classList.remove("open")}
+$("#sheetBack").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId)closeSheet()});
+let bookingOpen=false;
+function renderSheet(){
+  const r=rows.find(x=>x.id===openId);if(!r){closeSheet();return}
+  const keepNote=$("#shNote")?$("#shNote").value:"";
+  const sc=ST[r.status]||"acontatar";
+  const tel=r.telefone?'<a class="btn" href="tel:+55'+digits(r.telefone)+'">Ligar · '+esc(r.telefone)+'</a>':'<span class="tag">Sem telefone: ir pessoalmente</span>';
+  const wa=isCell(r.telefone)?'<a class="btn" href="'+esc(waLink(r))+'" target="_blank" rel="noopener">WhatsApp com mensagem pronta</a>':"";
+  const ag=r.agenda||{};
+  const defTeam=ag.equipe||TEAM_OF[r.resp]||"1";
+  const hist=(r.hist||[]).slice().reverse().map(h=>'<li><div><b>'+esc(h.acao)+'</b>'+(h.nota?' · '+esc(h.nota):"")+'</div><div class="when">'+esc(h.por||"")+' · '+esc(new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</div></li>').join("");
+  $("#sheet").innerHTML=
+  '<div class="hd"><h2 id="shTitle">'+esc(r.nome)+'</h2><button class="btn small" id="shClose" aria-label="Fechar">Fechar</button></div>'+
+  '<div class="bd">'+
+   '<div class="tags"><span class="pill s-'+sc+'">'+esc(r.status)+'</span><span class="tag">'+esc(r.tipo)+'</span>'+(tries(r)?'<span class="tag">'+tries(r)+' tentativa(s)</span>':'')+(r.proximo&&r.status!=="Agendado"&&r.status!=="Recusou"?'<span class="tag">Retomar '+fmtDate(r.proximo)+'</span>':'')+'</div>'+
+   '<div class="sec"><h3>Contato</h3><div class="contact">'+tel+wa+'<a class="btn" href="'+esc(mapLink(r))+'" target="_blank" rel="noopener">Ver no mapa</a></div></div>'+
+   '<dl class="kv"><dt>Endereço</dt><dd>'+esc(r.endereco)+'</dd><dt>Bairro</dt><dd>'+esc(r.bairro)+' · '+esc(r.cidade)+'</dd><dt>Região</dt><dd>'+esc(r.regiao)+'</dd><dt>Quem liga</dt><dd><select id="shResp" aria-label="Quem liga">'+PEOPLE.map(p=>'<option'+(p===r.resp?' selected':'')+'>'+p+'</option>').join("")+'</select></dd>'+(r.obs?'<dt>Dica</dt><dd>'+esc(r.obs)+'</dd>':'')+'</dl>'+
+   '<div class="sec"><h3>O que aconteceu?</h3>'+
+    '<label class="field" for="shNote">Anotação (opcional): com quem falou, o que disseram<textarea id="shNote">'+esc(keepNote)+'</textarea></label>'+
+    '<div class="actions" style="margin-top:8px">'+
+     '<button class="btn" data-act="nao">Não atendeu</button>'+
+     '<button class="btn" data-act="aguardando">Falei, vão retornar</button>'+
+     '<button class="btn ok" data-act="agendar">Agendou</button>'+
+     '<button class="btn no" data-act="recusou">Recusou</button>'+
+    '</div>'+
+    '<button class="btn small" data-act="anotar" style="margin-top:8px">Só salvar anotação</button>'+
+   '</div>'+
+   (bookingOpen||r.status==="Agendado"?
+   '<div class="bookbox"><b>'+(r.status==="Agendado"?"Ação agendada":"Agendar ação")+'</b>'+
+     '<div class="grid2"><label class="field" for="bDia">Dia<select id="bDia">'+DAYS.map(([iso,l])=>'<option value="'+iso+'"'+(ag.dia===iso?' selected':'')+'>'+l+'</option>').join("")+'</select></label>'+
+     '<label class="field" for="bTurno">Turno<select id="bTurno"><option'+(ag.turno==="Manhã"?' selected':'')+'>Manhã</option><option'+(ag.turno==="Tarde"?' selected':'')+'>Tarde</option></select></label></div>'+
+     '<label class="field" for="bEq">Equipe<select id="bEq"><option value="1"'+(defTeam==="1"?' selected':'')+'>'+TEAMS["1"]+'</option><option value="2"'+(defTeam==="2"?' selected':'')+'>'+TEAMS["2"]+'</option></select></label>'+
+     '<div class="grid2"><label class="field" for="bHora">Horário<input id="bHora" placeholder="ex.: 9h às 13h" value="'+esc(ag.horario||"")+'"></label>'+
+     '<label class="field" for="bQuem">Quem autorizou<input id="bQuem" placeholder="nome e cargo" value="'+esc(ag.contato||"")+'"></label></div>'+
+     '<label class="field" for="bPode">O que pode montar<input id="bPode" placeholder="mesa, banner, tenda, tomada…" value="'+esc(ag.pode||"")+'"></label>'+
+     '<p class="free" id="bConf" style="margin:0;font-size:14px;color:var(--wait)"></p>'+
+     '<div class="contact"><button class="btn ok" data-act="confirmar">'+(r.status==="Agendado"?"Salvar alterações":"Confirmar agendamento")+'</button>'+(r.status==="Agendado"?'<button class="btn no" data-act="desagendar">Cancelar agendamento</button>':'<button class="btn" data-act="fecharbook">Voltar</button>')+'</div>'+
+   '</div>':"")+
+   '<div class="sec"><h3>Histórico</h3>'+(hist?'<ul class="hist">'+hist+'</ul>':'<p class="count">Nenhum contato registrado ainda.</p>')+'</div>'+
+  '</div>';
+  checkConflict(r);
+  ["bDia","bTurno","bEq"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("change",()=>checkConflict(r))});
+}
+function checkConflict(r){
+  const el=$("#bConf");if(!el)return;
+  const d=$("#bDia").value,t=$("#bTurno").value,e=$("#bEq").value;
+  const o=rows.filter(x=>x.id!==r.id&&x.status==="Agendado"&&x.agenda&&x.agenda.dia===d&&x.agenda.turno===t&&x.agenda.equipe===e);
+  el.textContent=o.length?"Essa vaga já tem: "+o.map(x=>x.nome).join(", ")+". Só confirme se der para fazer as duas.":"";
+}
+
+async function write(r,patch,acao){
+  if(!me){toast("Escolha seu nome no topo antes");$("#meSel").focus();return}
+  const nota=($("#shNote")&&$("#shNote").value.trim())||"";
+  const hist=(r.hist||[]).slice();
+  if(acao)hist.push({t:new Date().toISOString(),por:me,acao:acao,nota:nota});
+  const body=Object.assign({},patch,acao?{hist:hist}:{} ,{atualizado:new Date().toISOString(),por:me});
+  try{
+    await db.collection("empresas").doc(r.id).update(body);
+    if($("#shNote"))$("#shNote").value="";
+    toast(acao?"Salvo: "+acao:"Salvo");
+  }catch(e){
+    if(e&&e.code==="permission-denied"){canWrite=false;note("Sem permissão para salvar. Saia e entre de novo.",true)}
+    else toast("Não salvou: tente de novo");
+  }
+}
+$("#sheet").addEventListener("click",async e=>{
+  if(e.target.id==="shClose"){closeSheet();return}
+  const b=e.target.closest("[data-act]");if(!b)return;
+  const r=rows.find(x=>x.id===openId);if(!r)return;
+  const a=b.dataset.act;
+  b.disabled=true;
+  try{
+    if(a==="nao")await write(r,{status:"Sem resposta",proximo:addBizDays(1)},"Não atendeu");
+    else if(a==="aguardando")await write(r,{status:"Aguardando retorno",proximo:addBizDays(2)},"Falei, vão retornar");
+    else if(a==="recusou")await write(r,{status:"Recusou",proximo:""},"Recusou");
+    else if(a==="anotar"){if(!$("#shNote").value.trim()){toast("Escreva a anotação primeiro");return}await write(r,{},"Anotação")}
+    else if(a==="agendar"){bookingOpen=true;renderSheet();const d=$("#bDia");if(d)d.focus()}
+    else if(a==="fecharbook"){bookingOpen=false;renderSheet()}
+    else if(a==="confirmar"){
+      const agenda={dia:$("#bDia").value,turno:$("#bTurno").value,equipe:$("#bEq").value,horario:$("#bHora").value.trim(),contato:$("#bQuem").value.trim(),pode:$("#bPode").value.trim()};
+      await write(r,{status:"Agendado",agenda:agenda,proximo:""},(r.status==="Agendado"?"Agendamento alterado":"Agendou")+": "+dayLabel(agenda.dia)+" · "+agenda.turno+" · Equipe "+agenda.equipe);
+      bookingOpen=false;
+    }
+    else if(a==="desagendar"){await write(r,{status:"Aguardando retorno",agenda:null,proximo:addBizDays(1)},"Agendamento cancelado");bookingOpen=false}
+  } finally { b.disabled=false }
+});
+$("#sheet").addEventListener("change",async e=>{
+  if(e.target.id==="shResp"){const r=rows.find(x=>x.id===openId);if(r&&e.target.value!==r.resp)await write(r,{resp:e.target.value},"Passou para "+e.target.value)}
+});
+
+/* ---------- eventos ---------- */
+document.addEventListener("click",e=>{
+  const o=e.target.closest("[data-open]");if(o&&!o.closest("#sheet")){bookingOpen=false;openSheet(o.dataset.open);return}
+  const c=e.target.closest("[data-sf]");if(c){statusFilter=c.dataset.sf;renderList();return}
+  const cp=e.target.closest("[data-copy]");if(cp){const t=$("#"+cp.dataset.copy).textContent;navigator.clipboard.writeText(t).then(()=>toast("Mensagem copiada"),()=>toast("Não deu para copiar: selecione o texto"))}
+});
+["fPessoa","fTipo","fRegiao"].forEach(id=>$("#"+id).addEventListener("change",renderList));
+$("#fBusca").addEventListener("input",renderList);
+$("#meSel").value=me;
+$("#meSel").addEventListener("change",e=>{me=e.target.value;try{localStorage.setItem("acoes_me",me)}catch(_){}if(me&&canWrite)note("");render()});
+$("#fNova").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!db){toast("Sem conexão com os dados");return}
+  if(!me){toast("Escolha seu nome no topo antes");return}
+  const cidade=$("#nCidade").value.trim()||"São José dos Campos";
+  const doc={n:9000+rows.length,nome:$("#nNome").value.trim(),tipo:$("#nTipo").value,resp:$("#nResp").value,endereco:$("#nEnd").value.trim(),bairro:$("#nBairro").value.trim(),cidade:cidade,regiao:cidade==="São José dos Campos"?"Outra":"Região",frente:"Adicionada",telefone:$("#nTel").value.trim(),status:"A contatar",proximo:"",obs:"",hist:[{t:new Date().toISOString(),por:me,acao:"Adicionou a empresa",nota:""}],agenda:null,atualizado:new Date().toISOString(),por:me};
+  if(!doc.nome)return;
+  try{await db.collection("empresas").add(doc);e.target.reset();$("#nCidade").value="São José dos Campos";toast("Empresa adicionada");}
+  catch(err){toast(err&&err.code==="resource-exhausted"?"Limite de empresas atingido":"Não salvou: tente de novo")}
+});
+
+/* ---------- dados (Firebase) ---------- */
+// >>> COLE AQUI a configuração do seu projeto Firebase (Configurações do projeto > Seus apps > Web)
+const firebaseConfig = {
+  apiKey: "COLE_AQUI",
+  authDomain: "COLE_AQUI.firebaseapp.com",
+  projectId: "COLE_AQUI",
+  storageBucket: "COLE_AQUI.appspot.com",
+  messagingSenderId: "COLE_AQUI",
+  appId: "COLE_AQUI"
+};
+// E-mail de login -> nome na equipe (preenche o "Você é" sozinho)
+const EQUIPE = {
+  // "isabella@exemplo.com": "Isabella",
+  // "alice@exemplo.com": "Alice",
+  // "flavia@exemplo.com": "Flávia",
+  // "angelica@exemplo.com": "Angélica",
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+db=firebase.firestore();
+let unsub=null;
+$("#fLogin").addEventListener("submit",async e=>{
+  e.preventDefault();$("#lErr").textContent="";
+  try{await auth.signInWithEmailAndPassword($("#lEmail").value.trim(),$("#lSenha").value)}
+  catch(err){$("#lErr").textContent="E-mail ou senha incorretos."}
+});
+$("#btnSair").addEventListener("click",()=>auth.signOut());
+auth.onAuthStateChanged(u=>{
+  const logged=!!u;
+  $("#login").hidden=logged;$("#app").hidden=!logged;$("#navTabs").hidden=!logged;$("#btnSair").hidden=!logged;
+  if(!logged){if(unsub){unsub();unsub=null}loaded=false;rows=[];return}
+  const nm=EQUIPE[(u.email||"").toLowerCase()];
+  if(nm){me=nm;$("#meSel").value=nm;try{localStorage.setItem("acoes_me",me)}catch(_){}}
+  start();
+});
+function start(){
+  note("Carregando empresas…");
+  const timer=setTimeout(()=>{if(!loaded)note("Os dados estão demorando para chegar. Confira a internet; a página continua tentando.",true)},10000);
+  unsub=db.collection("empresas").onSnapshot(snap=>{
+    clearTimeout(timer);
+    rows=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    const regs=[...new Set(rows.map(r=>r.regiao).filter(Boolean))].sort();
+    const fr=$("#fRegiao"),cur=fr.value;
+    fr.innerHTML='<option value="">Todas as regiões</option>'+regs.map(x=>'<option'+(x===cur?' selected':'')+'>'+esc(x)+'</option>').join("");
+    loaded=true;
+    if(!rows.length){$("#msg").innerHTML='<div class="note">A lista está vazia. <button class="btn small" id="btnSeed">Carregar a lista inicial (152 empresas)</button></div>'}
+    else if(!me)note("Escolha seu nome no topo (Você é) para ver a sua carteira e assinar os contatos.");
+    else note("");
+    render();
+  },err=>{clearTimeout(timer);note("Sem permissão para ler os dados. Confira as regras do Firestore (arquivo firestore.rules).",true)});
+}
+document.addEventListener("click",async e=>{
+  if(e.target.id!=="btnSeed")return;
+  e.target.disabled=true;e.target.textContent="Carregando…";
+  try{
+    const list=await (await fetch("empresas.json")).json();
+    for(let i=0;i<list.length;i+=400){
+      const batch=db.batch();
+      list.slice(i,i+400).forEach(d=>{const id=d.id;const body=Object.assign({},d);delete body.id;batch.set(db.collection("empresas").doc(id),body)});
+      await batch.commit();
+    }
+    toast("Lista carregada");
+  }catch(err){note("Não consegui carregar a lista: "+(err&&err.message||err),true);e.target.disabled=false}
+});
+})();
+</script>
+</body>
+</html>
