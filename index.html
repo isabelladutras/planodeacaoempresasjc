@@ -130,6 +130,14 @@ th{font-size:13px;color:var(--muted);font-weight:700}
 .msgbox{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:15px;white-space:pre-wrap}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:40;display:none}
 .toast.show{display:block}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--no);color:#fff;font-size:12px;line-height:18px;text-align:center;margin-left:4px}
+.rec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.rec.done{opacity:.55}
+.rec.mine-to{border-left:4px solid var(--accent)}
+.rec .who{font-size:13px;color:var(--muted)}
+.rec .txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.recs{display:grid;gap:10px;max-width:760px}
+.recform{display:grid;gap:8px;max-width:760px;margin-bottom:14px}
 h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}.card:hover{border-color:var(--accent)}}
 </style>
@@ -140,7 +148,7 @@ h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
 <body>
 <header>
   <div class="top">
-    <h1>Ações SJC — Contatos<small>Semana de ações UniFECAF · 07 a 12/12 · Polo Rua Bacabal, 2250</small></h1>
+    <h1>Ações SJC — Contatos<small>Semana de ações UniFECAF · 07 a 12/12 · Polo Rua Bacabal, 2250 · versão 5</small></h1>
     <label class="me" for="meSel">Você é
       <select id="meSel">
         <option value="">escolha</option>
@@ -154,6 +162,7 @@ h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
     <button role="tab" id="tab-agenda" aria-selected="false" data-view="agenda">Agenda</button>
     <button role="tab" id="tab-painel" aria-selected="false" data-view="painel">Painel</button>
     <button role="tab" id="tab-roteiro" aria-selected="false" data-view="roteiro">Roteiro</button>
+    <button role="tab" id="tab-recados" aria-selected="false" data-view="recados">Recados<span class="badge" id="recBadge" hidden>0</span></button>
     <button role="tab" id="tab-nova" aria-selected="false" data-view="nova">+ Empresa</button>
   </nav>
 </header>
@@ -190,6 +199,7 @@ h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
 
   <section id="v-agenda" hidden>
     <h2 class="sec-title">Agenda das ações</h2>
+    <button class="btn small" id="btnCopyAgenda" style="margin-bottom:10px">Copiar agenda para o grupo do WhatsApp</button>
     <p class="count">Equipe 1: Alice e Angélica · Equipe 2: Isabella e Flávia · Cada equipe tem uma vaga de manhã e uma à tarde por dia.</p>
     <div class="days" id="days"></div>
   </section>
@@ -198,6 +208,8 @@ h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
     <h2 class="sec-title">Como estamos</h2>
     <div class="tiles" id="tiles"></div>
     <div class="tablewrap"><table id="tbl"></table></div>
+    <h2 class="sec-title" style="margin-top:18px">Hoje</h2>
+    <div class="tablewrap"><table id="tblHoje"></table></div>
   </section>
 
   <section id="v-roteiro" hidden>
@@ -218,6 +230,19 @@ h2.sec-title{font-family:var(--display);font-size:18px;margin:4px 0 10px}
       <div class="msgbox" id="msgRH"></div>
       <button class="btn small" data-copy="msgRH">Copiar mensagem</button>
     </div>
+  </section>
+
+  <section id="v-recados" hidden>
+    <h2 class="sec-title">Recados da equipe</h2>
+    <form class="recform script" id="fRec">
+      <label class="field" for="rTexto">Escreva um recado<textarea id="rTexto" placeholder="Ex.: Consegui o contato do gerente regional do Shibata, quem precisar me chama" required></textarea></label>
+      <div class="grid2">
+        <label class="field" for="rPara">Para<select id="rPara"><option>Todas</option><option>Isabella</option><option>Alice</option><option>Flávia</option><option>Angélica</option></select></label>
+        <div style="display:flex;align-items:flex-end"><button class="btn primary" type="submit" style="width:100%">Enviar recado</button></div>
+      </div>
+    </form>
+    <div class="chips" id="recChips"></div>
+    <div class="recs" id="recList"></div>
   </section>
 
   <section id="v-nova" hidden>
@@ -358,7 +383,7 @@ function note(t,err){$("#msg").innerHTML=t?'<div class="note'+(err?' err':'')+'"
 /* ---------- views ---------- */
 function setView(v){
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.view===v)));
-  ["lista","agenda","painel","roteiro","nova"].forEach(x=>{$("#v-"+x).hidden=(x!==v)});
+  ["lista","agenda","painel","roteiro","recados","nova"].forEach(x=>{$("#v-"+x).hidden=(x!==v)});
   render();
 }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
@@ -422,7 +447,71 @@ function renderPainel(){
   const head='<tr><th>Carteira</th><th>Empresas</th><th>A contatar</th><th>Msg enviada</th><th>Não atendeu</th><th>Aguardando</th><th>Agendados</th><th>Recusou</th></tr>';
   const line=p=>{const m=rows.filter(r=>r.resp===p);const c=s=>m.filter(r=>r.status===s).length;return'<tr><td><b>'+esc(p)+'</b></td><td>'+m.length+'</td><td>'+c("A contatar")+'</td><td>'+c("Mensagem enviada")+'</td><td>'+c("Sem resposta")+'</td><td>'+c("Aguardando retorno")+'</td><td><b>'+c("Agendado")+'</b></td><td>'+c("Recusou")+'</td></tr>'};
   $("#tbl").innerHTML=head+PEOPLE.map(line).join("");
+  const td=todayISO();
+  const hist=rows.flatMap(r=>(r.hist||[]).map(h=>Object.assign({emp:r.nome},h))).filter(h=>{const d=new Date(h.t);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)===td});
+  const cnt=(p,f)=>hist.filter(h=>h.por===p&&f(h.acao||"")).length;
+  $("#tblHoje").innerHTML='<tr><th>Quem</th><th>Contatos registrados</th><th>Mensagens</th><th>Ligações sem resposta</th><th>Agendou</th></tr>'+
+    PEOPLE.map(p=>'<tr><td><b>'+esc(p)+'</b></td><td>'+cnt(p,a=>a!=="Anotação")+'</td><td>'+cnt(p,a=>a.startsWith("Mandou mensagem"))+'</td><td>'+cnt(p,a=>a==="Não atendeu")+'</td><td><b>'+cnt(p,a=>a.startsWith("Agendou"))+'</b></td></tr>').join("");
 }
+
+let recados=[], recFilter="pramim", unsubRec=null;
+function recSeen(){try{return localStorage.getItem("acoes_rec_seen")||""}catch(_){return""}}
+function forMe(x){return x.para==="Todas"||x.para===me}
+function renderBadge(){
+  const b=$("#recBadge");if(!b)return;
+  const seen=recSeen();
+  const n=recados.filter(x=>forMe(x)&&x.de!==me&&!x.feito&&(!seen||x.t>seen)).length;
+  b.textContent=n;b.hidden=!n||curView()==="recados";
+}
+function fmtWhen(t){try{return new Date(t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(_){return""}}
+function recItem(x){
+  return '<div class="rec'+(x.feito?' done':'')+(x.para===me&&x.de!==me?' mine-to':'')+'"><div class="who"><b>'+esc(x.de)+'</b> para <b>'+esc(x.para)+'</b> · '+esc(fmtWhen(x.t))+(x.empresaNome?' · sobre <b>'+esc(x.empresaNome)+'</b>':'')+(x.feito?' · resolvido':'')+'</div>'+
+    '<div class="txt">'+esc(x.texto)+'</div>'+
+    '<div class="contact">'+(x.empresaId?'<button class="btn small" data-open="'+esc(x.empresaId)+'">Abrir empresa</button>':'')+
+    '<button class="btn small" data-recdone="'+esc(x.id)+'">'+(x.feito?'Reabrir':'Resolvido')+'</button>'+
+    (x.de===me?'<button class="btn small no" data-recdel="'+esc(x.id)+'">Apagar</button>':'')+'</div></div>';
+}
+function renderRecados(){
+  try{localStorage.setItem("acoes_rec_seen",new Date().toISOString())}catch(_){}
+  const F={pramim:{l:"Para mim",f:x=>forMe(x)&&!x.feito},abertos:{l:"Todos abertos",f:x=>!x.feito},meus:{l:"Que eu mandei",f:x=>x.de===me},todos:{l:"Todos",f:()=>true}};
+  $("#recChips").innerHTML=Object.keys(F).map(k=>'<button class="chip" data-recf="'+k+'" aria-pressed="'+(recFilter===k)+'">'+F[k].l+' <b>'+recados.filter(F[k].f).length+'</b></button>').join("");
+  const list=recados.filter(F[recFilter].f).sort((a,b)=>a.t<b.t?1:-1);
+  $("#recList").innerHTML=list.map(recItem).join("")||'<p class="count">Nenhum recado aqui.</p>';
+}
+async function addRecado(texto,para,emp){
+  if(!me){toast("Escolha seu nome no topo antes");return false}
+  if(!texto.trim())return false;
+  try{await db.collection("recados").add({texto:texto.trim(),para:para||"Todas",de:me,t:new Date().toISOString(),feito:false,empresaId:emp?emp.id:"",empresaNome:emp?emp.nome:""});toast("Recado enviado");return true}
+  catch(e){toast("Não salvou o recado. Confira as regras do Firestore.");return false}
+}
+$("#fRec").addEventListener("submit",async e=>{e.preventDefault();if(await addRecado($("#rTexto").value,$("#rPara").value,null)){$("#rTexto").value=""}});
+document.addEventListener("click",async e=>{
+  const f=e.target.closest("[data-recf]");if(f){recFilter=f.dataset.recf;renderRecados();return}
+  const d=e.target.closest("[data-recdone]");if(d){const x=recados.find(y=>y.id===d.dataset.recdone);if(x)try{await db.collection("recados").doc(x.id).update({feito:!x.feito,feitoPor:me})}catch(_){toast("Não salvou")}return}
+  const del=e.target.closest("[data-recdel]");if(del){try{await db.collection("recados").doc(del.dataset.recdel).delete()}catch(_){toast("Não apagou")}return}
+  if(e.target.id==="btnCopyAgenda"){
+    const booked=rows.filter(r=>r.status==="Agendado"&&r.agenda);
+    let t="*Agenda das ações UniFECAF SJC*\n";
+    DAYS.forEach(([iso,lab])=>{
+      t+="\n*"+lab+"*\n";
+      [["1","Manhã"],["1","Tarde"],["2","Manhã"],["2","Tarde"]].forEach(([eq,tu])=>{
+        const h=booked.filter(r=>r.agenda.dia===iso&&r.agenda.equipe===eq&&r.agenda.turno===tu);
+        t+="Equipe "+eq+" · "+tu+": "+(h.length?h.map(r=>r.nome+(r.agenda.horario?" ("+r.agenda.horario+")":"")+" – "+r.endereco).join(" | "):"vaga livre")+"\n";
+      });
+    });
+    try{await navigator.clipboard.writeText(t);toast("Agenda copiada. É só colar no grupo")}catch(_){toast("Não deu para copiar")}
+  }
+});
+function startRecados(){
+  if(unsubRec)return;
+  unsubRec=db.collection("recados").onSnapshot(snap=>{
+    recados=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    renderBadge();
+    if(curView()==="recados")renderRecados();
+    if(openId)renderSheetKeep();
+  },()=>{});
+}
+function renderSheetKeep(){const ta=$("#shRecTxt");const v=ta?ta.value:"";renderSheet();const tb=$("#shRecTxt");if(tb)tb.value=v}
 
 function renderRoteiro(){
   document.querySelectorAll(".nm").forEach(e=>e.textContent=me||"[seu nome]");
@@ -433,7 +522,8 @@ function renderRoteiro(){
 function render(){
   if(!loaded)return;
   const v=curView();
-  if(v==="lista")renderList();else if(v==="agenda")renderAgenda();else if(v==="painel")renderPainel();else if(v==="roteiro")renderRoteiro();
+  if(v==="lista")renderList();else if(v==="agenda")renderAgenda();else if(v==="painel")renderPainel();else if(v==="roteiro")renderRoteiro();else if(v==="recados")renderRecados();
+  renderBadge();
   if(openId)renderSheet();
 }
 
@@ -496,6 +586,10 @@ function renderSheet(){
      '<p class="free" id="bConf" style="margin:0;font-size:14px;color:var(--wait)"></p>'+
      '<div class="contact"><button class="btn ok" data-act="confirmar">'+(r.status==="Agendado"?"Salvar alterações":"Confirmar agendamento")+'</button>'+(r.status==="Agendado"?'<button class="btn no" data-act="desagendar">Cancelar agendamento</button>':'<button class="btn" data-act="fecharbook">Voltar</button>')+'</div>'+
    '</div>':"")+
+   (function(){const rl=recados.filter(x=>x.empresaId===r.id).sort((a,b)=>a.t<b.t?1:-1);
+     return '<div class="sec"><h3>Recados sobre esta empresa</h3>'+(rl.length?'<div class="recs" style="margin-bottom:10px">'+rl.map(recItem).join("")+'</div>':'')+
+     '<label class="field" for="shRecTxt">Deixar recado para<select id="shRecPara" style="margin-bottom:6px">'+["Todas"].concat(PEOPLE).map(p=>'<option>'+p+'</option>').join("")+'</select><textarea id="shRecTxt" placeholder="Ex.: Liguei e pediram para falar com a Carla do RH depois das 14h"></textarea></label>'+
+     '<button class="btn small" data-act="recado" style="margin-top:6px">Enviar recado</button></div>'})()+
    '<div class="sec"><h3>Histórico</h3>'+(hist?'<ul class="hist">'+hist+'</ul>':'<p class="count">Nenhum contato registrado ainda.</p>')+'</div>'+
   '</div>';
   checkConflict(r);
@@ -539,6 +633,7 @@ $("#sheet").addEventListener("click",async e=>{
     else if(a==="recusou"){await write(r,{status:"Recusou",proximo:""},"Recusou");if(autoNext)goNext(1,"Salvo");return}
     else if(a==="anotar"){if(!$("#shNote").value.trim()){toast("Escreva a anotação primeiro");return}await write(r,{},"Anotação")}
     else if(a==="outraversao"){const base=msgDraft.v==null?(msgDraft.mom==="retomar"?0:hashId(r.id)):msgDraft.v;msgDraft.v=base+1;msgDraft.text=null;renderSheet();return}
+    else if(a==="recado"){if(await addRecado($("#shRecTxt").value,$("#shRecPara").value,r)){$("#shRecTxt").value=""}return}
     else if(a==="copiarmsg"){const t=$("#shMsg").value;try{await navigator.clipboard.writeText(t);toast("Copiada. Depois de enviar, clique em \"Mandei mensagem\"")}catch(_){$("#shMsg").select();toast("Selecionei o texto: use Ctrl+C")}}
     else if(a==="agendar"){bookingOpen=true;renderSheet();const d=$("#bDia");if(d)d.focus()}
     else if(a==="fecharbook"){bookingOpen=false;renderSheet()}
@@ -627,12 +722,13 @@ $("#btnSair").addEventListener("click",()=>auth.signOut());
 auth.onAuthStateChanged(u=>{
   const logged=!!u;
   $("#login").hidden=logged;$("#app").hidden=!logged;$("#navTabs").hidden=!logged;$("#btnSair").hidden=!logged;
-  if(!logged){if(unsub){unsub();unsub=null}loaded=false;rows=[];return}
+  if(!logged){if(unsub){unsub();unsub=null}if(unsubRec){unsubRec();unsubRec=null}recados=[];loaded=false;rows=[];return}
   const nm=EQUIPE[(u.email||"").toLowerCase()];
   if(nm){me=nm;$("#meSel").value=nm;try{localStorage.setItem("acoes_me",me)}catch(_){}}
   start();
 });
 function start(){
+  startRecados();
   note("Carregando empresas…");
   const timer=setTimeout(()=>{if(!loaded)note("Os dados estão demorando para chegar. Confira a internet; a página continua tentando.",true)},10000);
   unsub=db.collection("empresas").onSnapshot(snap=>{
