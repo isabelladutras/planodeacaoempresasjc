@@ -67,9 +67,10 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 .s-acontatar{background:var(--idle-bg);color:var(--idle)}
 .s-semresposta{background:var(--try-bg);color:var(--try)}
 .s-aguardando{background:var(--wait-bg);color:var(--wait)}
+.s-enviada{background:var(--idle-bg);color:var(--accent)}
 .s-agendado{background:var(--ok-bg);color:var(--ok)}
 .s-recusou{background:var(--no-bg);color:var(--no)}
-.st-acontatar{background:var(--idle)}.st-semresposta{background:var(--try)}.st-aguardando{background:var(--warm)}.st-agendado{background:var(--ok)}.st-recusou{background:var(--no)}
+.st-acontatar{background:var(--idle)}.st-semresposta{background:var(--try)}.st-aguardando{background:var(--warm)}.st-agendado{background:var(--ok)}.st-enviada{background:var(--accent)}.st-recusou{background:var(--no)}
 .due{font-size:12px;font-weight:700;color:var(--no)}
 .tags{display:flex;flex-wrap:wrap;gap:6px}
 .tag{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--muted)}
@@ -253,7 +254,7 @@ const DAYS=[["2026-12-07","Seg 07/12"],["2026-12-08","Ter 08/12"],["2026-12-09",
 const TEAMS={"1":"Equipe 1 · Alice e Angélica","2":"Equipe 2 · Isabella e Flávia"};
 const TEAM_OF={"Alice":"1","Angélica":"1","Isabella":"2","Flávia":"2"};
 const PEOPLE=["Isabella","Alice","Flávia","Angélica"];
-const ST={"A contatar":"acontatar","Sem resposta":"semresposta","Aguardando retorno":"aguardando","Agendado":"agendado","Recusou":"recusou"};
+const ST={"A contatar":"acontatar","Sem resposta":"semresposta","Mensagem enviada":"enviada","Aguardando retorno":"aguardando","Agendado":"agendado","Recusou":"recusou"};
 const $=s=>document.querySelector(s);
 let db=null, rows=[], loaded=false, openId=null, canWrite=true;
 let me=""; try{me=localStorage.getItem("acoes_me")||""}catch(e){}
@@ -283,7 +284,7 @@ function kindOf(r){
 function nearPolo(r){return!!r&&(/Parque Industrial/i.test(r.bairro||"")||/Bacabal/i.test(r.endereco||""))}
 const ASK={loja:"o gerente da loja",farmacia:"o gerente da farmácia",shopping:"o marketing do shopping",rh:"alguém do RH",hospital:"alguém do RH",parque:"a administração do parque",simpatia:"o gerente da loja",simpatiaCD:"alguém do RH ou do marketing da rede"};
 function askFor(r){return ASK[kindOf(r)]}
-function defaultMoment(r){if(!r)return"abertura";if(r.status==="Agendado")return"confirmar";if(r.status==="Sem resposta"||r.status==="Aguardando retorno")return"retomar";return"abertura"}
+function defaultMoment(r){if(!r)return"abertura";if(r.status==="Agendado")return"confirmar";if(r.status==="Mensagem enviada")return(r.proximo&&r.proximo<=todayISO())?"retomar":"proposta";if(r.status==="Sem resposta"||r.status==="Aguardando retorno")return"retomar";return"abertura"}
 function hashId(t){let h=0;for(const c of String(t||""))h=(h*31+c.charCodeAt(0))>>>0;return h}
 function saud(){const h=new Date().getHours();return h<12?"Bom dia":h<18?"Boa tarde":"Boa noite"}
 const MOMENTOS=[["abertura","1ª mensagem"],["proposta","Depois que responderem"],["retomar","Retomar"],["confirmar","Confirmar"],["vespera","Lembrete na véspera"]];
@@ -348,7 +349,7 @@ function msgFor(r,mom,v){
   return o[i];
 }
 function callLine(r){return"Peça "+askFor(r)+". Diga: \""+saud()+"! Meu nome é "+(me||"[seu nome]")+", sou da UniFECAF, do nosso polo novo aqui em São José. Posso falar com "+askFor(r)+"? É rapidinho, é sobre um bate-papo com a equipe de vocês.\" Quando a pessoa atender, use o texto de \"Depois que responderem\" como roteiro."}
-function isDue(r){if(r.status==="A contatar")return true;if((r.status==="Sem resposta"||r.status==="Aguardando retorno")&&r.proximo&&r.proximo<=todayISO())return true;return false}
+function isDue(r){if(r.status==="A contatar")return true;if((r.status==="Sem resposta"||r.status==="Aguardando retorno"||r.status==="Mensagem enviada")&&r.proximo&&r.proximo<=todayISO())return true;return false}
 function tries(r){return(r.hist||[]).filter(h=>h.acao==="Não atendeu").length}
 
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),2200)}
@@ -370,6 +371,7 @@ function filtered(){
 const SF={
   pendentes:{l:"Pra trabalhar",f:r=>r.status!=="Agendado"&&r.status!=="Recusou"},
   hoje:{l:"Pra hoje",f:isDue},
+  enviada:{l:"Mensagem enviada",f:r=>r.status==="Mensagem enviada"},
   aguardando:{l:"Aguardando retorno",f:r=>r.status==="Aguardando retorno"},
   semresposta:{l:"Não atendeu",f:r=>r.status==="Sem resposta"},
   agendado:{l:"Agendados",f:r=>r.status==="Agendado"},
@@ -383,9 +385,10 @@ function renderList(){
   const pSel=$("#fPessoa").value;
   if(pSel==="__me"&&!me){$("#count").textContent="Escolha seu nome no topo (Você é) para ver a sua carteira.";$("#list").innerHTML="";return}
   $("#count").textContent=list.length+" empresa"+(list.length===1?"":"s");
+  lastList=list.map(r=>r.id);
   $("#list").innerHTML=list.map(r=>{
     const sc=ST[r.status]||"acontatar";
-    const due=isDue(r)&&r.status!=="A contatar"?'<span class="due">Retomar hoje</span>':(r.proximo&&(r.status==="Sem resposta"||r.status==="Aguardando retorno")?'<span class="tag">Retomar '+fmtDate(r.proximo)+'</span>':"");
+    const due=isDue(r)&&r.status!=="A contatar"?'<span class="due">Retomar hoje</span>':(r.proximo&&(r.status==="Sem resposta"||r.status==="Aguardando retorno"||r.status==="Mensagem enviada")?'<span class="tag">Retomar '+fmtDate(r.proximo)+'</span>':"");
     const ag=r.status==="Agendado"&&r.agenda?'<span class="tag">'+esc(dayLabel(r.agenda.dia))+' · '+esc(r.agenda.turno)+' · Eq. '+esc(r.agenda.equipe)+'</span>':"";
     const tr=tries(r)?'<span class="tag">'+tries(r)+' tentativa'+(tries(r)>1?'s':'')+'</span>':"";
     return '<button class="card" data-open="'+esc(r.id)+'"><span class="stripe st-'+sc+'"></span><span class="in"><span class="row1"><span class="name">'+esc(r.nome)+'</span><span class="pill s-'+sc+'">'+esc(r.status)+'</span></span><span class="meta">'+esc(r.bairro)+(r.cidade&&r.cidade!=="São José dos Campos"?"":"")+' · '+esc(r.tipo)+(pSel===""?' · '+esc(r.resp):"")+'</span><span class="tags"><span class="tag">'+esc(r.telefone||"sem telefone")+'</span>'+tr+due+ag+'</span></span></button>';
@@ -416,8 +419,8 @@ function renderPainel(){
     '<div class="tile"><div class="v">'+touched+' de '+rows.length+'</div><div class="l">empresas já contatadas</div><div class="bar"><i style="width:'+(rows.length?Math.round(touched/rows.length*100):0)+'%"></i></div></div>'+
     '<div class="tile"><div class="v">'+aguard+'</div><div class="l">aguardando retorno</div></div>'+
     '<div class="tile"><div class="v">'+hoje+'</div><div class="l">pra retomar hoje</div></div>';
-  const head='<tr><th>Carteira</th><th>Empresas</th><th>A contatar</th><th>Não atendeu</th><th>Aguardando</th><th>Agendados</th><th>Recusou</th></tr>';
-  const line=p=>{const m=rows.filter(r=>r.resp===p);const c=s=>m.filter(r=>r.status===s).length;return'<tr><td><b>'+esc(p)+'</b></td><td>'+m.length+'</td><td>'+c("A contatar")+'</td><td>'+c("Sem resposta")+'</td><td>'+c("Aguardando retorno")+'</td><td><b>'+c("Agendado")+'</b></td><td>'+c("Recusou")+'</td></tr>'};
+  const head='<tr><th>Carteira</th><th>Empresas</th><th>A contatar</th><th>Msg enviada</th><th>Não atendeu</th><th>Aguardando</th><th>Agendados</th><th>Recusou</th></tr>';
+  const line=p=>{const m=rows.filter(r=>r.resp===p);const c=s=>m.filter(r=>r.status===s).length;return'<tr><td><b>'+esc(p)+'</b></td><td>'+m.length+'</td><td>'+c("A contatar")+'</td><td>'+c("Mensagem enviada")+'</td><td>'+c("Sem resposta")+'</td><td>'+c("Aguardando retorno")+'</td><td><b>'+c("Agendado")+'</b></td><td>'+c("Recusou")+'</td></tr>'};
   $("#tbl").innerHTML=head+PEOPLE.map(line).join("");
 }
 
@@ -435,11 +438,15 @@ function render(){
 }
 
 /* ---------- ficha ---------- */
-function openSheet(id){openId=id;msgDraft=null;$("#sheet").classList.add("open");$("#sheetBack").classList.add("open");renderSheet();setTimeout(()=>{const c=$("#shClose");if(c)c.focus()},0)}
+function openSheet(id,fromList){if(fromList||!queue.includes(id))queue=fromList?lastList.slice():[id];openId=id;msgDraft=null;bookingOpen=false;$("#sheet").classList.add("open");$("#sheetBack").classList.add("open");renderSheet();setTimeout(()=>{const c=$("#shClose");if(c)c.focus()},0)}
 function closeSheet(){openId=null;$("#sheet").classList.remove("open");$("#sheetBack").classList.remove("open")}
 $("#sheetBack").addEventListener("click",closeSheet);
+(function(){let x0=null,y0=null;const sh=$("#sheet");
+  sh.addEventListener("touchstart",e=>{if(e.target.closest("textarea,input,select"))return;x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
+  sh.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;if(Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*2)goNext(dx<0?1:-1)},{passive:true});
+})();
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId)closeSheet()});
-let bookingOpen=false; let msgDraft=null;
+let bookingOpen=false; let msgDraft=null; let lastList=[]; let queue=[]; let autoNext=true; try{autoNext=localStorage.getItem("acoes_auto")!=="0"}catch(_){}
 function renderSheet(){
   const r=rows.find(x=>x.id===openId);if(!r){closeSheet();return}
   const keepNote=$("#shNote")?$("#shNote").value:"";
@@ -459,20 +466,24 @@ function renderSheet(){
   const defTeam=ag.equipe||TEAM_OF[r.resp]||"1";
   const hist=(r.hist||[]).slice().reverse().map(h=>'<li><div><b>'+esc(h.acao)+'</b>'+(h.nota?' · '+esc(h.nota):"")+'</div><div class="when">'+esc(h.por||"")+' · '+esc(new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</div></li>').join("");
   $("#sheet").innerHTML=
-  '<div class="hd"><h2 id="shTitle">'+esc(r.nome)+'</h2><button class="btn small" id="shClose" aria-label="Fechar">Fechar</button></div>'+
+  '<div class="hd"><div style="flex:1;min-width:0"><h2 id="shTitle">'+esc(r.nome)+'</h2>'+(queue.length>1?'<div class="count" style="margin:4px 0 0">'+(queue.indexOf(r.id)+1)+' de '+queue.length+' da lista</div>':'')+'</div>'+
+  (queue.length>1?'<button class="btn small" data-nav="-1" aria-label="Empresa anterior">←</button><button class="btn small" data-nav="1">Próxima →</button>':'')+
+  '<button class="btn small" id="shClose" aria-label="Fechar">Fechar</button></div>'+
   '<div class="bd">'+
    '<div class="tags"><span class="pill s-'+sc+'">'+esc(r.status)+'</span><span class="tag">'+esc(r.tipo)+'</span>'+(tries(r)?'<span class="tag">'+tries(r)+' tentativa(s)</span>':'')+(r.proximo&&r.status!=="Agendado"&&r.status!=="Recusou"?'<span class="tag">Retomar '+fmtDate(r.proximo)+'</span>':'')+'</div>'+
    '<div class="sec"><h3>Contato</h3><div class="contact">'+tel+'<a class="btn" href="'+esc(mapLink(r))+'" target="_blank" rel="noopener">Ver no mapa</a></div></div>'+
    '<dl class="kv"><dt>Endereço</dt><dd>'+esc(r.endereco)+'</dd><dt>Bairro</dt><dd>'+esc(r.bairro)+' · '+esc(r.cidade)+'</dd><dt>Região</dt><dd>'+esc(r.regiao)+'</dd><dt>Quem liga</dt><dd><select id="shResp" aria-label="Quem liga">'+PEOPLE.map(p=>'<option'+(p===r.resp?' selected':'')+'>'+p+'</option>').join("")+'</select></dd>'+(r.obs?'<dt>Dica</dt><dd>'+esc(r.obs)+'</dd>':'')+'</dl>'+
    msgSec+'<div class="sec"><h3>O que aconteceu?</h3>'+
     '<label class="field" for="shNote">Anotação (opcional): com quem falou, o que disseram<textarea id="shNote">'+esc(keepNote)+'</textarea></label>'+
+    (r.status!=="Agendado"?'<button class="btn primary" data-act="enviei" style="width:100%;margin-top:8px">Mandei mensagem, aguardando resposta</button>':'')+
     '<div class="actions" style="margin-top:8px">'+
      '<button class="btn" data-act="nao">Não atendeu</button>'+
-     '<button class="btn" data-act="aguardando">Falei, vão retornar</button>'+
+     '<button class="btn" data-act="aguardando">Responderam, vão retornar</button>'+
      '<button class="btn ok" data-act="agendar">Agendou</button>'+
      '<button class="btn no" data-act="recusou">Recusou</button>'+
     '</div>'+
-    '<button class="btn small" data-act="anotar" style="margin-top:8px">Só salvar anotação</button>'+
+    '<div class="contact" style="margin-top:8px;align-items:center"><button class="btn small" data-act="anotar">Só salvar anotação</button>'+
+    '<label style="display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted)" for="shAuto"><input type="checkbox" id="shAuto"'+(autoNext?' checked':'')+'> Ir para a próxima empresa depois de salvar</label></div>'+
    '</div>'+
    (bookingOpen||r.status==="Agendado"?
    '<div class="bookbox"><b>'+(r.status==="Agendado"?"Ação agendada":"Agendar ação")+'</b>'+
@@ -514,6 +525,7 @@ async function write(r,patch,acao){
 }
 $("#sheet").addEventListener("click",async e=>{
   if(e.target.id==="shClose"){closeSheet();return}
+  const nv=e.target.closest("[data-nav]");if(nv){goNext(+nv.dataset.nav);return}
   const mb=e.target.closest("[data-mom]");
   if(mb){msgDraft={id:openId,mom:mb.dataset.mom,v:null,text:null};renderSheet();return}
   const b=e.target.closest("[data-act]");if(!b)return;
@@ -521,12 +533,13 @@ $("#sheet").addEventListener("click",async e=>{
   const a=b.dataset.act;
   b.disabled=true;
   try{
-    if(a==="nao")await write(r,{status:"Sem resposta",proximo:addBizDays(1)},"Não atendeu");
+    if(a==="enviei"){await markSent(r);if(autoNext)goNext(1,"Salvo");return}
+    if(a==="nao"){await write(r,{status:"Sem resposta",proximo:addBizDays(1)},"Não atendeu");if(autoNext)goNext(1,"Salvo");return}
     else if(a==="aguardando")await write(r,{status:"Aguardando retorno",proximo:addBizDays(2)},"Falei, vão retornar");
-    else if(a==="recusou")await write(r,{status:"Recusou",proximo:""},"Recusou");
+    else if(a==="recusou"){await write(r,{status:"Recusou",proximo:""},"Recusou");if(autoNext)goNext(1,"Salvo");return}
     else if(a==="anotar"){if(!$("#shNote").value.trim()){toast("Escreva a anotação primeiro");return}await write(r,{},"Anotação")}
     else if(a==="outraversao"){const base=msgDraft.v==null?(msgDraft.mom==="retomar"?0:hashId(r.id)):msgDraft.v;msgDraft.v=base+1;msgDraft.text=null;renderSheet();return}
-    else if(a==="copiarmsg"){const t=$("#shMsg").value;try{await navigator.clipboard.writeText(t);toast("Mensagem copiada")}catch(_){$("#shMsg").select();toast("Selecionei o texto: use Ctrl+C")}}
+    else if(a==="copiarmsg"){const t=$("#shMsg").value;try{await navigator.clipboard.writeText(t);toast("Copiada. Depois de enviar, clique em \"Mandei mensagem\"")}catch(_){$("#shMsg").select();toast("Selecionei o texto: use Ctrl+C")}}
     else if(a==="agendar"){bookingOpen=true;renderSheet();const d=$("#bDia");if(d)d.focus()}
     else if(a==="fecharbook"){bookingOpen=false;renderSheet()}
     else if(a==="confirmar"){
@@ -537,16 +550,35 @@ $("#sheet").addEventListener("click",async e=>{
     else if(a==="desagendar"){await write(r,{status:"Aguardando retorno",agenda:null,proximo:addBizDays(1)},"Agendamento cancelado");bookingOpen=false}
   } finally { b.disabled=false }
 });
+function goNext(step,after){
+  const i=queue.indexOf(openId);const j=i+(step||1);
+  if(i<0||j<0||j>=queue.length){if(after)toast(after+" · fim da lista");return false}
+  const nx=rows.find(x=>x.id===queue[j]);
+  openId=queue[j];msgDraft=null;bookingOpen=false;renderSheet();$("#sheet").scrollTop=0;
+  if(after&&nx)toast(after+" · próxima: "+nx.nome);
+  return true;
+}
+async function markSent(r){
+  const lab=(MOMENTOS.find(m=>m[0]===(msgDraft&&msgDraft.mom))||[,"mensagem"])[1];
+  if(r.status==="Agendado"){await write(r,{},"Mandou mensagem ("+lab+")");return}
+  if(r.status==="Mensagem enviada"&&r.proximo===addBizDays(1)&&(r.hist||[]).length&&(r.hist[r.hist.length-1].acao||"").startsWith("Mandou mensagem")&&Date.now()-new Date(r.hist[r.hist.length-1].t).getTime()<120000)return;
+  await write(r,{status:"Mensagem enviada",proximo:addBizDays(1),ultimaMsg:(msgDraft&&msgDraft.mom)||""},"Mandou mensagem ("+lab+")");
+  if(msgDraft&&msgDraft.mom==="abertura"){msgDraft={id:r.id,mom:"proposta",v:null,text:null};renderSheet()}
+}
+$("#sheet").addEventListener("click",e=>{
+  if(e.target.id==="shWa"){const r=rows.find(x=>x.id===openId);if(r&&me)markSent(r).then(()=>{if(autoNext)goNext(1,"Marcado como enviada")})}
+});
 $("#sheet").addEventListener("input",e=>{
   if(e.target.id==="shMsg"&&msgDraft){msgDraft.text=e.target.value;const w=$("#shWa");const r=rows.find(x=>x.id===openId);if(w&&r)w.href=waLinkText(r,e.target.value)}
 });
 $("#sheet").addEventListener("change",async e=>{
+  if(e.target.id==="shAuto"){autoNext=e.target.checked;try{localStorage.setItem("acoes_auto",autoNext?"1":"0")}catch(_){};return}
   if(e.target.id==="shResp"){const r=rows.find(x=>x.id===openId);if(r&&e.target.value!==r.resp)await write(r,{resp:e.target.value},"Passou para "+e.target.value)}
 });
 
 /* ---------- eventos ---------- */
 document.addEventListener("click",e=>{
-  const o=e.target.closest("[data-open]");if(o&&!o.closest("#sheet")){bookingOpen=false;openSheet(o.dataset.open);return}
+  const o=e.target.closest("[data-open]");if(o&&!o.closest("#sheet")){openSheet(o.dataset.open,!!o.closest("#list"));return}
   const c=e.target.closest("[data-sf]");if(c){statusFilter=c.dataset.sf;renderList();return}
   const cp=e.target.closest("[data-copy]");if(cp){const t=$("#"+cp.dataset.copy).textContent;navigator.clipboard.writeText(t).then(()=>toast("Mensagem copiada"),()=>toast("Não deu para copiar: selecione o texto"))}
 });
